@@ -56,6 +56,10 @@ android {
             shrinkResources false
         }
     }
+
+    aaptOptions {
+        cruncherEnabled = false
+    }
 }
 
 flutter {
