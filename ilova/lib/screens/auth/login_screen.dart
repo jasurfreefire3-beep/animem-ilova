@@ -3,10 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/toast_utils.dart';
-import '../../../widgets/google_logo.dart';
-import '../../../widgets/telegram_logo.dart';
 import '../../../widgets/forgot_password_dialog.dart';
-import '../../../widgets/telegram_auth_dialog.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -45,30 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         ToastUtils.showError(context, authProvider.errorMessage ?? "Kirishda xatolik yuz berdi");
       }
-    }
-  }
-
-  Future<void> _googleLogin() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.loginWithGoogle();
-
-    if (mounted) {
-      if (success) {
-        ToastUtils.showSuccess(context, "Google orqali kirdingiz!");
-        Navigator.pop(context);
-      } else if (authProvider.errorMessage != null) {
-        ToastUtils.showError(context, authProvider.errorMessage!);
-      }
-    }
-  }
-
-  void _openTelegramAuth() async {
-    final result = await showDialog(
-      context: context,
-      builder: (_) => const TelegramAuthDialog(),
-    );
-    if (result == true && mounted) {
-      Navigator.pop(context);
     }
   }
 
@@ -186,71 +159,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: authProvider.isLoading
                         ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text("Kirish"),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Yoki ajratgich
-                Row(
-                  children: const [
-                    Expanded(child: Divider(color: AppTheme.surfaceBorder)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text("yoki", style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
-                    ),
-                    Expanded(child: Divider(color: AppTheme.surfaceBorder)),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Google orqali kirish
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: authProvider.isLoading ? null : _googleLogin,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppTheme.surfaceBorder),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        GoogleLogo(size: 20),
-                        SizedBox(width: 12),
-                        Text(
-                          "Google orqali kirish",
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Telegram orqali kirish
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: authProvider.isLoading ? null : _openTelegramAuth,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppTheme.surfaceBorder),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        TelegramLogo(size: 20),
-                        SizedBox(width: 12),
-                        Text(
-                          "Telegram orqali kirish",
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
                 const SizedBox(height: 24),

@@ -57,6 +57,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   bool _isEmbedOrIframeUrl(String url) {
     final lower = url.toLowerCase();
+    if (lower.contains('cdn.animem.uz') || lower.contains('pub-') || lower.contains('r2.dev') || lower.contains('cloudflarestream')) {
+      return false;
+    }
     return lower.contains('iframe') ||
         lower.contains('sibnet.ru') ||
         lower.contains('mover.uz') ||
