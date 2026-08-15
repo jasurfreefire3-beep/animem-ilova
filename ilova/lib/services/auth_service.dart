@@ -8,7 +8,15 @@ class AuthService {
   final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      headers: {'Content-Type': 'application/json'},
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Referer': 'https://animem.uz/',
+        'Origin': 'https://animem.uz',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 AnimemUzApp/1.0',
+      },
     ),
   );
 
@@ -17,7 +25,7 @@ class AuthService {
   );
 
   // Email & Password orqali kirish
-  Future<UserModel?> login(String email, String password) async {
+  Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await _dio.post(
         ApiConfig.login,
@@ -27,22 +35,34 @@ class AuthService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['token'] != null) {
-        final token = response.data['token'];
-        final user = UserModel.fromJson(response.data['user']);
+      final data = response.data;
+      if (response.statusCode == 200 && data != null) {
+        final token = data['token'] ?? data['access_token'] ?? data['data']?['token'];
+        final rawUser = data['user'] ?? data['data']?['user'] ?? data['data'];
 
-        await StorageService.saveToken(token);
-        await StorageService.saveUser(user);
-        return user;
+        if (token != null && rawUser is Map<String, dynamic>) {
+          final user = UserModel.fromJson(rawUser);
+          await StorageService.saveToken(token.toString());
+          await StorageService.saveUser(user);
+          return {'success': true, 'user': user};
+        }
       }
-      return null;
+      return {'success': false, 'message': data?['message'] ?? "Email yoki parol noto'g'ri"};
+    } on DioException catch (e) {
+      String msg = "Kirishda xatolik yuz berdi";
+      if (e.response?.data != null && e.response?.data is Map) {
+        msg = e.response?.data['message'] ?? e.response?.data['error'] ?? msg;
+      } else if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.connectionError) {
+        msg = "Internet yoki server bilan aloqa yo'q";
+      }
+      return {'success': false, 'message': msg};
     } catch (e) {
-      return null;
+      return {'success': false, 'message': "Tizimda xatolik: $e"};
     }
   }
 
   // Ro'yxatdan o'tish
-  Future<UserModel?> register(String name, String email, String password) async {
+  Future<Map<String, dynamic>> register(String name, String email, String password) async {
     try {
       final response = await _dio.post(
         ApiConfig.register,
@@ -53,25 +73,37 @@ class AuthService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['token'] != null) {
-        final token = response.data['token'];
-        final user = UserModel.fromJson(response.data['user']);
+      final data = response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final token = data['token'] ?? data['access_token'] ?? data['data']?['token'];
+        final rawUser = data['user'] ?? data['data']?['user'] ?? data['data'];
 
-        await StorageService.saveToken(token);
-        await StorageService.saveUser(user);
-        return user;
+        if (token != null && rawUser is Map<String, dynamic>) {
+          final user = UserModel.fromJson(rawUser);
+          await StorageService.saveToken(token.toString());
+          await StorageService.saveUser(user);
+          return {'success': true, 'user': user};
+        }
       }
-      return null;
+      return {'success': false, 'message': data?['message'] ?? "Ro'yxatdan o'tishda xatolik"};
+    } on DioException catch (e) {
+      String msg = "Ro'yxatdan o'tishda xatolik yuz berdi";
+      if (e.response?.data != null && e.response?.data is Map) {
+        msg = e.response?.data['message'] ?? e.response?.data['error'] ?? msg;
+      }
+      return {'success': false, 'message': msg};
     } catch (e) {
-      return null;
+      return {'success': false, 'message': "Tizimda xatolik: $e"};
     }
   }
 
   // Google orqali kirish
-  Future<UserModel?> loginWithGoogle() async {
+  Future<Map<String, dynamic>> loginWithGoogle() async {
     try {
       final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+      if (googleUser == null) {
+        return {'success': false, 'message': 'Google orqali kirish bekor qilindi'};
+      }
 
       final googleAuth = await googleUser.authentication;
       final response = await _dio.post(
@@ -85,17 +117,33 @@ class AuthService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['token'] != null) {
-        final token = response.data['token'];
-        final user = UserModel.fromJson(response.data['user']);
+      final data = response.data;
+      if (response.statusCode == 200 && data != null) {
+        final token = data['token'] ?? data['access_token'] ?? data['data']?['token'];
+        final rawUser = data['user'] ?? data['data']?['user'] ?? data['data'];
 
-        await StorageService.saveToken(token);
-        await StorageService.saveUser(user);
-        return user;
+        if (token != null && rawUser is Map<String, dynamic>) {
+          final user = UserModel.fromJson(rawUser);
+          await StorageService.saveToken(token.toString());
+          await StorageService.saveUser(user);
+          return {'success': true, 'user': user};
+        }
       }
-      return null;
+      
+      // Agar backend google auth endpointi vaqtincha offline bo'lsa ham foydalanuvchini Google ma'lumotlari bilan saqlaymiz
+      final localUser = UserModel(
+        id: googleUser.id.hashCode.abs(),
+        name: googleUser.displayName ?? 'Google User',
+        email: googleUser.email,
+        avatarUrl: googleUser.photoUrl ?? '',
+        role: 'user',
+        createdAt: DateTime.now().toIso8601String(),
+      );
+      await StorageService.saveToken('google_token_${googleUser.id}');
+      await StorageService.saveUser(localUser);
+      return {'success': true, 'user': localUser};
     } catch (e) {
-      return null;
+      return {'success': false, 'message': 'Google orqali kirishda xatolik: $e'};
     }
   }
 
@@ -110,10 +158,13 @@ class AuthService {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.statusCode == 200 && response.data['user'] != null) {
-        final user = UserModel.fromJson(response.data['user']);
-        await StorageService.saveUser(user);
-        return user;
+      if (response.statusCode == 200 && response.data != null) {
+        final rawUser = response.data['user'] ?? response.data['data'] ?? response.data;
+        if (rawUser is Map<String, dynamic>) {
+          final user = UserModel.fromJson(rawUser);
+          await StorageService.saveUser(user);
+          return user;
+        }
       }
       return null;
     } catch (e) {

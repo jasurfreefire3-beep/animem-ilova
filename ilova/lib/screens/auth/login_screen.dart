@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/toast_utils.dart';
+import '../../../widgets/google_logo.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -135,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: authProvider.isLoading ? null : _login,
                     child: authProvider.isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text("Kirish"),
                   ),
                 ),
@@ -158,21 +159,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: OutlinedButton.icon(
+                  child: OutlinedButton(
                     onPressed: authProvider.isLoading ? null : _googleLogin,
-                    icon: Image.network(
-                      'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                      width: 20,
-                      height: 20,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata, color: Colors.white),
-                    ),
-                    label: const Text(
-                      "Google orqali kirish",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppTheme.surfaceBorder),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        GoogleLogo(size: 20),
+                        SizedBox(width: 12),
+                        Text(
+                          "Google orqali kirish",
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ],
                     ),
                   ),
                 ),

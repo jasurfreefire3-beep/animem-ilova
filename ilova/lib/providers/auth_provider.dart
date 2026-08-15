@@ -41,15 +41,16 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final loggedInUser = await _authService.login(email, password);
+    final result = await _authService.login(email, password);
     _isLoading = false;
 
-    if (loggedInUser != null) {
-      _user = loggedInUser;
+    if (result['success'] == true && result['user'] != null) {
+      _user = result['user'] as UserModel;
+      _errorMessage = null;
       notifyListeners();
       return true;
     } else {
-      _errorMessage = "Email yoki parol noto'g'ri";
+      _errorMessage = result['message'] ?? "Email yoki parol noto'g'ri";
       notifyListeners();
       return false;
     }
@@ -60,15 +61,16 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final registeredUser = await _authService.register(name, email, password);
+    final result = await _authService.register(name, email, password);
     _isLoading = false;
 
-    if (registeredUser != null) {
-      _user = registeredUser;
+    if (result['success'] == true && result['user'] != null) {
+      _user = result['user'] as UserModel;
+      _errorMessage = null;
       notifyListeners();
       return true;
     } else {
-      _errorMessage = "Ro'yxatdan o'tishda xatolik yuz berdi";
+      _errorMessage = result['message'] ?? "Ro'yxatdan o'tishda xatolik yuz berdi";
       notifyListeners();
       return false;
     }
@@ -79,15 +81,16 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final googleUser = await _authService.loginWithGoogle();
+    final result = await _authService.loginWithGoogle();
     _isLoading = false;
 
-    if (googleUser != null) {
-      _user = googleUser;
+    if (result['success'] == true && result['user'] != null) {
+      _user = result['user'] as UserModel;
+      _errorMessage = null;
       notifyListeners();
       return true;
     } else {
-      _errorMessage = "Google orqali kirish bekor qilindi";
+      _errorMessage = result['message'] ?? "Google orqali kirishda xatolik yuz berdi";
       notifyListeners();
       return false;
     }

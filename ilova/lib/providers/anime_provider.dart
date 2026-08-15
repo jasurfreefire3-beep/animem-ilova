@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 class AnimeProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
 
+  List<AnimeModel> _allAnimes = [];
   List<AnimeModel> _animes = [];
   List<AnimeModel> _banners = [];
   List<AnimeModel> _top100 = [];
@@ -35,11 +36,14 @@ class AnimeProvider with ChangeNotifier {
 
     try {
       final all = await _apiService.getAnimes();
+      _allAnimes = all;
       _animes = all;
+
       _banners = all.where((a) => a.isBanner || a.tavsiya).take(6).toList();
       if (_banners.isEmpty && all.isNotEmpty) {
         _banners = all.take(5).toList();
       }
+
       _recommended = all.where((a) => a.tavsiya).toList();
       if (_recommended.isEmpty && all.isNotEmpty) {
         _recommended = all.take(10).toList();
@@ -64,12 +68,41 @@ class AnimeProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final results = await _apiService.getAnimes(
-      search: query,
-      genre: _selectedGenre == 'Barchasi' ? null : _selectedGenre,
-    );
+    try {
+      final results = await _apiService.getAnimes(
+        search: query.trim().isNotEmpty ? query.trim() : null,
+        genre: _selectedGenre == 'Barchasi' ? null : _selectedGenre,
+      );
 
-    _animes = results;
+      if (results.isNotEmpty) {
+        _animes = results;
+      } else if (query.trim().isNotEmpty || _selectedGenre != 'Barchasi') {
+        // Fallback to local filter if remote returned empty
+        final q = query.trim().toLowerCase();
+        _animes = _allAnimes.where((a) {
+          final matchesQuery = q.isEmpty ||
+              a.title.toLowerCase().contains(q) ||
+              a.description.toLowerCase().contains(q) ||
+              a.janrlar.toLowerCase().contains(q);
+          final matchesGenre = _selectedGenre == 'Barchasi' ||
+              a.janrlar.toLowerCase().contains(_selectedGenre.toLowerCase());
+          return matchesQuery && matchesGenre;
+        }).toList();
+      } else {
+        _animes = _allAnimes;
+      }
+    } catch (_) {
+      final q = query.trim().toLowerCase();
+      _animes = _allAnimes.where((a) {
+        final matchesQuery = q.isEmpty ||
+            a.title.toLowerCase().contains(q) ||
+            a.description.toLowerCase().contains(q);
+        final matchesGenre = _selectedGenre == 'Barchasi' ||
+            a.janrlar.toLowerCase().contains(_selectedGenre.toLowerCase());
+        return matchesQuery && matchesGenre;
+      }).toList();
+    }
+
     _isLoading = false;
     notifyListeners();
   }

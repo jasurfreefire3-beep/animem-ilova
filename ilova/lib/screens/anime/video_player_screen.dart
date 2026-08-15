@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../../../config/api_config.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/anime_model.dart';
 import '../../../models/episode_model.dart';
 import '../../../services/storage_service.dart';
-import '../../../utils/toast_utils.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final AnimeModel anime;
@@ -29,7 +29,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late int _currentEpisodeIndex;
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
+  WebViewController? _webViewController;
+  
   bool _isLoading = true;
+  bool _isIframeMode = false;
   String? _errorMessage;
 
   @override
@@ -43,7 +46,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     if (widget.episodes.isNotEmpty && _currentEpisodeIndex < widget.episodes.length) {
       return widget.episodes[_currentEpisodeIndex];
     }
-    // Agar epizodlar yo'q bo'lsa, anime videoUrl'ini olamiz
     return EpisodeModel(
       id: 0,
       animeId: widget.anime.id,
@@ -53,26 +55,75 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
+  bool _isEmbedOrIframeUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('iframe') ||
+        lower.contains('sibnet.ru') ||
+        lower.contains('mover.uz') ||
+        lower.contains('vk.com') ||
+        lower.contains('ok.ru') ||
+        lower.contains('myvi') ||
+        lower.contains('youtube.com') ||
+        lower.contains('youtu.be') ||
+        lower.contains('embed') ||
+        lower.contains('.html') ||
+        lower.contains('player.animem.uz') ||
+        (!lower.endsWith('.mp4') && !lower.endsWith('.m3u8') && !lower.contains('.mp4?') && !lower.contains('.m3u8?'));
+  }
+
+  String _extractIframeSrc(String raw) {
+    if (raw.contains('<iframe') && raw.contains('src=')) {
+      final match = RegExp(r'src=["\x27]([^"\x27]+)["\x27]').firstMatch(raw);
+      if (match != null && match.group(1) != null) {
+        return match.group(1)!;
+      }
+    }
+    return raw;
+  }
+
   Future<void> _initializePlayer() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _isIframeMode = false;
     });
 
-    _disposePlayer();
+    _disposeControllers();
 
-    final videoUrl = currentEpisode.videoUrl;
-    if (videoUrl.isEmpty) {
+    String rawVideoUrl = currentEpisode.videoUrl.trim();
+    if (rawVideoUrl.isEmpty) {
+      rawVideoUrl = widget.anime.videoUrl.trim();
+    }
+
+    if (rawVideoUrl.isEmpty) {
       setState(() {
         _isLoading = false;
-        _errorMessage = "Ushbu qism uchun video manzili topilmadi";
+        _errorMessage = "Ushbu qism uchun video manzili mavjud emas";
       });
       return;
     }
 
+    final videoUrl = _extractIframeSrc(rawVideoUrl);
+
+    // Agar URL iframe yoki veb player bo'lsa
+    if (_isEmbedOrIframeUrl(videoUrl)) {
+      _setupIframePlayer(videoUrl);
+      return;
+    }
+
+    // Direct stream (mp4 / m3u8) bilan Cloudflare headerlarini berib ochish
     try {
-      final parsedUri = Uri.parse(ApiConfig.fullUrl(videoUrl));
-      _videoPlayerController = VideoPlayerController.networkUrl(parsedUri);
+      final fullUrl = ApiConfig.fullUrl(videoUrl);
+      final parsedUri = Uri.parse(fullUrl);
+
+      _videoPlayerController = VideoPlayerController.networkUrl(
+        parsedUri,
+        httpHeaders: {
+          'Referer': 'https://animem.uz/',
+          'Origin': 'https://animem.uz',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 AnimemUzApp/1.0',
+        },
+      );
 
       await _videoPlayerController!.initialize();
 
@@ -96,14 +147,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               children: [
                 const Icon(Icons.error_outline, color: AppTheme.error, size: 42),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   "Videoni yuklashda xatolik yuz berdi",
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.white),
                 ),
                 const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: _initializePlayer,
-                  child: const Text("Qayta urinish"),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _initializePlayer,
+                      child: const Text("Qayta urinish"),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      onPressed: () => _setupIframePlayer(videoUrl),
+                      child: const Text("Veb playerda ochish", style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -111,10 +172,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         },
       );
 
-      // Tinglovchi: Tarixga saqlab borish
       _videoPlayerController!.addListener(() {
-        if (_videoPlayerController != null &&
-            _videoPlayerController!.value.isInitialized) {
+        if (_videoPlayerController != null && _videoPlayerController!.value.isInitialized) {
           final position = _videoPlayerController!.value.position.inSeconds;
           if (position > 5) {
             StorageService.saveWatchHistory(
@@ -130,20 +189,90 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
       setState(() {
         _isLoading = false;
+        _isIframeMode = false;
+      });
+    } catch (e) {
+      // Agar direct playerda xato bo'lsa, avtomatik iframe playerga o'tkazamiz
+      _setupIframePlayer(videoUrl);
+    }
+  }
+
+  void _setupIframePlayer(String url) {
+    try {
+      String finalUrl = url;
+      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+        finalUrl = ApiConfig.fullUrl(finalUrl);
+      }
+
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Colors.black)
+        ..setUserAgent("Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (String url) {
+              if (mounted) setState(() => _isLoading = true);
+            },
+            onPageFinished: (String url) {
+              if (mounted) setState(() => _isLoading = false);
+            },
+            onWebResourceError: (WebResourceError error) {
+              if (mounted) {
+                setState(() {
+                  _isLoading = false;
+                });
+              }
+            },
+          ),
+        );
+
+      if (url.contains('<iframe')) {
+        final html = '''
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <style>
+              body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+              iframe { width: 100%; height: 100%; border: none; }
+            </style>
+          </head>
+          <body>
+            $url
+          </body>
+          </html>
+        ''';
+        controller.loadHtmlString(html, baseUrl: 'https://animem.uz/');
+      } else {
+        controller.loadRequest(
+          Uri.parse(finalUrl),
+          headers: {
+            'Referer': 'https://animem.uz/',
+            'Origin': 'https://animem.uz',
+          },
+        );
+      }
+
+      setState(() {
+        _webViewController = controller;
+        _isIframeMode = true;
+        _isLoading = false;
+        _errorMessage = null;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = "Video o'ynatgichni ishga tushirishda xatolik: $e";
+        _errorMessage = "Player yuklanmadi: $e";
       });
     }
   }
 
-  void _disposePlayer() {
+  void _disposeControllers() {
     _chewieController?.dispose();
     _videoPlayerController?.dispose();
     _chewieController = null;
     _videoPlayerController = null;
+    _webViewController = null;
   }
 
   void _changeEpisode(int index) {
@@ -157,7 +286,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
-    _disposePlayer();
+    _disposeControllers();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -173,7 +302,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         backgroundColor: Colors.black,
         title: Text(
           "${widget.anime.title} - ${currentEpisode.episodeNumber}-qism",
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 15),
         ),
       ),
       body: Column(
@@ -183,25 +312,42 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             aspectRatio: 16 / 9,
             child: Container(
               color: Colors.black,
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: AppTheme.primary),
-                    )
-                  : _errorMessage != null
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
+              child: Stack(
+                children: [
+                  if (_isIframeMode && _webViewController != null)
+                    WebViewWidget(controller: _webViewController!)
+                  else if (!_isIframeMode &&
+                      _chewieController != null &&
+                      _chewieController!.videoPlayerController.value.isInitialized)
+                    Chewie(controller: _chewieController!)
+                  else if (_errorMessage != null)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, color: AppTheme.error, size: 36),
+                            const SizedBox(height: 8),
+                            Text(
                               _errorMessage!,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white70),
+                              style: const TextStyle(color: Colors.white70, fontSize: 13),
                             ),
-                          ),
-                        )
-                  : _chewieController != null &&
-                          _chewieController!.videoPlayerController.value.isInitialized
-                      ? Chewie(controller: _chewieController!)
-                      : const SizedBox.shrink(),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  if (_isLoading)
+                    Container(
+                      color: Colors.black54,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: AppTheme.primary),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
 
@@ -217,26 +363,32 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "${currentEpisode.episodeNumber}-qism: ${currentEpisode.title}",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "${currentEpisode.episodeNumber}-qism: ${currentEpisode.title}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.anime.title,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppTheme.textSecondary,
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.anime.title,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
 
                         // Keyingi qism tugmasi

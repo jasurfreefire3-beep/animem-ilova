@@ -5,13 +5,21 @@ import '../../../config/app_theme.dart';
 import '../../../models/manga_model.dart';
 import 'manga_reader_screen.dart';
 
-class MangaDetailScreen extends StatelessWidget {
+class MangaDetailScreen extends StatefulWidget {
   final MangaModel manga;
 
   const MangaDetailScreen({Key? key, required this.manga}) : super(key: key);
 
   @override
+  State<MangaDetailScreen> createState() => _MangaDetailScreenState();
+}
+
+class _MangaDetailScreenState extends State<MangaDetailScreen> {
+  bool _isDescriptionExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final manga = widget.manga;
     final coverUrl = ApiConfig.fullUrl(manga.coverUrl);
 
     return Scaffold(
@@ -37,6 +45,7 @@ class MangaDetailScreen extends StatelessWidget {
                       width: 120,
                       height: 175,
                       color: AppTheme.surfaceLight,
+                      child: const Icon(Icons.menu_book, color: AppTheme.textMuted, size: 40),
                     ),
                   ),
                 ),
@@ -105,14 +114,35 @@ class MangaDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              manga.description,
+              manga.description.isEmpty ? "Tavsif mavjud emas" : manga.description,
               style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.5),
+              maxLines: _isDescriptionExpanded ? null : 3,
+              overflow: _isDescriptionExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
             ),
+            if (manga.description.length > 120)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isDescriptionExpanded = !_isDescriptionExpanded;
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    _isDescriptionExpanded ? "Kamroq ko'rsatish" : "Ko'proq o'qish...",
+                    style: const TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 24),
 
             // Boblar ro'yxati
             Text(
-              "Barcha boblar (${manga.chaptersCount})",
+              "Barcha boblar (${manga.chaptersCount > 0 ? manga.chaptersCount : 1})",
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 12),

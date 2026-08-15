@@ -24,6 +24,9 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Referer': 'https://animem.uz/',
+          'Origin': 'https://animem.uz',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 AnimemUzApp/1.0',
         },
       ),
     );
@@ -35,14 +38,41 @@ class ApiService {
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          options.headers['Referer'] = 'https://animem.uz/';
+          options.headers['Origin'] = 'https://animem.uz';
           return handler.next(options);
         },
         onError: (DioException error, handler) {
-          // Token muddati o'tgan bo'lsa yoki xatolik
           return handler.next(error);
         },
       ),
     );
+  }
+
+  // Helper for parsing lists
+  List<T> _parseList<T>(dynamic data, T Function(Map<String, dynamic>) parser) {
+    if (data == null) return [];
+    if (data is List) {
+      return data.whereType<Map<String, dynamic>>().map(parser).toList();
+    }
+    if (data is Map) {
+      if (data['data'] is List) {
+        return (data['data'] as List).whereType<Map<String, dynamic>>().map(parser).toList();
+      }
+      if (data['animes'] is List) {
+        return (data['animes'] as List).whereType<Map<String, dynamic>>().map(parser).toList();
+      }
+      if (data['episodes'] is List) {
+        return (data['episodes'] as List).whereType<Map<String, dynamic>>().map(parser).toList();
+      }
+      if (data['mangas'] is List) {
+        return (data['mangas'] as List).whereType<Map<String, dynamic>>().map(parser).toList();
+      }
+      if (data['results'] is List) {
+        return (data['results'] as List).whereType<Map<String, dynamic>>().map(parser).toList();
+      }
+    }
+    return [];
   }
 
   // --- ANIMES ---
@@ -57,16 +87,16 @@ class ApiService {
       final response = await _dio.get(
         ApiConfig.animes,
         queryParameters: {
-          if (search != null && search.isNotEmpty) 'search': search,
-          if (genre != null && genre.isNotEmpty) 'genre': genre,
+          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          if (genre != null && genre.isNotEmpty && genre != 'Barchasi') 'genre': genre,
           if (status != null && status.isNotEmpty) 'status': status,
           if (year != null) 'year': year,
           if (sortBy != null) 'sort': sortBy,
         },
       );
 
-      if (response.statusCode == 200 && response.data is List) {
-        return (response.data as List).map((json) => AnimeModel.fromJson(json)).toList();
+      if (response.statusCode == 200) {
+        return _parseList(response.data, (json) => AnimeModel.fromJson(json));
       }
       return [];
     } catch (e) {
@@ -78,7 +108,16 @@ class ApiService {
     try {
       final response = await _dio.get('${ApiConfig.animes}/$id');
       if (response.statusCode == 200) {
-        return AnimeModel.fromJson(response.data);
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          if (data['data'] is Map<String, dynamic>) {
+            return AnimeModel.fromJson(data['data']);
+          }
+          if (data['anime'] is Map<String, dynamic>) {
+            return AnimeModel.fromJson(data['anime']);
+          }
+          return AnimeModel.fromJson(data);
+        }
       }
       return null;
     } catch (e) {
@@ -89,8 +128,8 @@ class ApiService {
   Future<List<EpisodeModel>> getAnimeEpisodes(dynamic animeId) async {
     try {
       final response = await _dio.get('${ApiConfig.animes}/$animeId/episodes');
-      if (response.statusCode == 200 && response.data is List) {
-        return (response.data as List).map((json) => EpisodeModel.fromJson(json)).toList();
+      if (response.statusCode == 200) {
+        return _parseList(response.data, (json) => EpisodeModel.fromJson(json));
       }
       return [];
     } catch (e) {
@@ -99,11 +138,17 @@ class ApiService {
   }
 
   // --- MANGAS ---
-  Future<List<MangaModel>> getMangas() async {
+  Future<List<MangaModel>> getMangas({String? search, String? genre}) async {
     try {
-      final response = await _dio.get(ApiConfig.mangas);
-      if (response.statusCode == 200 && response.data is List) {
-        return (response.data as List).map((json) => MangaModel.fromJson(json)).toList();
+      final response = await _dio.get(
+        ApiConfig.mangas,
+        queryParameters: {
+          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          if (genre != null && genre.isNotEmpty && genre != 'Barchasi') 'genre': genre,
+        },
+      );
+      if (response.statusCode == 200) {
+        return _parseList(response.data, (json) => MangaModel.fromJson(json));
       }
       return [];
     } catch (e) {
@@ -115,7 +160,16 @@ class ApiService {
     try {
       final response = await _dio.get('${ApiConfig.mangas}/$id');
       if (response.statusCode == 200) {
-        return MangaModel.fromJson(response.data);
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          if (data['data'] is Map<String, dynamic>) {
+            return MangaModel.fromJson(data['data']);
+          }
+          if (data['manga'] is Map<String, dynamic>) {
+            return MangaModel.fromJson(data['manga']);
+          }
+          return MangaModel.fromJson(data);
+        }
       }
       return null;
     } catch (e) {
@@ -127,7 +181,16 @@ class ApiService {
     try {
       final response = await _dio.get('${ApiConfig.mangas}/$mangaId/chapters/$chapterNumber');
       if (response.statusCode == 200) {
-        return MangaChapterModel.fromJson(response.data);
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          if (data['data'] is Map<String, dynamic>) {
+            return MangaChapterModel.fromJson(data['data']);
+          }
+          if (data['chapter'] is Map<String, dynamic>) {
+            return MangaChapterModel.fromJson(data['chapter']);
+          }
+          return MangaChapterModel.fromJson(data);
+        }
       }
       return null;
     } catch (e) {
@@ -140,10 +203,8 @@ class ApiService {
     try {
       final user = StorageService.getUser();
       final response = await _dio.get('${ApiConfig.animes}/$animeId/comments');
-      if (response.statusCode == 200 && response.data is List) {
-        return (response.data as List)
-            .map((json) => CommentModel.fromJson(json, currentUserId: user?.id))
-            .toList();
+      if (response.statusCode == 200) {
+        return _parseList(response.data, (json) => CommentModel.fromJson(json, currentUserId: user?.id));
       }
       return [];
     } catch (e) {
@@ -225,10 +286,13 @@ class ApiService {
           'discord': discord,
         },
       );
-      if (response.statusCode == 200 && response.data['user'] != null) {
-        final updatedUser = UserModel.fromJson(response.data['user']);
-        await StorageService.saveUser(updatedUser);
-        return updatedUser;
+      if (response.statusCode == 200 && response.data != null) {
+        final userData = response.data['user'] ?? response.data['data'] ?? response.data;
+        if (userData is Map<String, dynamic>) {
+          final updatedUser = UserModel.fromJson(userData);
+          await StorageService.saveUser(updatedUser);
+          return updatedUser;
+        }
       }
       return null;
     } catch (e) {
@@ -246,10 +310,13 @@ class ApiService {
         data: {'avatar_url': base64Image},
       );
 
-      if (response.statusCode == 200 && response.data['user'] != null) {
-        final updatedUser = UserModel.fromJson(response.data['user']);
-        await StorageService.saveUser(updatedUser);
-        return updatedUser;
+      if (response.statusCode == 200 && response.data != null) {
+        final userData = response.data['user'] ?? response.data['data'] ?? response.data;
+        if (userData is Map<String, dynamic>) {
+          final updatedUser = UserModel.fromJson(userData);
+          await StorageService.saveUser(updatedUser);
+          return updatedUser;
+        }
       }
       return null;
     } catch (e) {
@@ -271,10 +338,13 @@ class ApiService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['user'] != null) {
-        final updatedUser = UserModel.fromJson(response.data['user']);
-        await StorageService.saveUser(updatedUser);
-        return updatedUser;
+      if (response.statusCode == 200 && response.data != null) {
+        final userData = response.data['user'] ?? response.data['data'] ?? response.data;
+        if (userData is Map<String, dynamic>) {
+          final updatedUser = UserModel.fromJson(userData);
+          await StorageService.saveUser(updatedUser);
+          return updatedUser;
+        }
       }
       return null;
     } catch (e) {

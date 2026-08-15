@@ -19,9 +19,10 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.2
 
-  # Media & Video Player (HLS, m3u8, mp4)
+  # Media & Video Player (HLS, m3u8, mp4, iframe webview)
   video_player: ^2.8.2
   chewie: ^1.7.4
+  webview_flutter: ^4.7.0
   cached_network_image: ^3.3.1
   image_picker: ^1.0.7
 
