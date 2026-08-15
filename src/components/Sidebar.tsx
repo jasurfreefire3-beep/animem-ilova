@@ -98,11 +98,17 @@ export default function Sidebar({ onClose, onGenreSelect }: SidebarProps) {
     <div className="w-full h-full flex flex-col text-white select-none">
       {/* Brand Logo */}
       <div className="relative h-28 flex items-center justify-center px-5 border-b border-[#1a1a1a]">
-        <Link to="/" onClick={onClose} className="flex items-center group">
+        <Link to="/" onClick={onClose} className="flex items-center group gap-2">
           <img 
-            src={logoImg} 
-            alt="AnimeUz" 
-            className="h-[80px] w-auto object-contain transition-transform group-hover:scale-105" 
+            src={logoImg || "/logo.png"} 
+            alt="Animem.uz" 
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              if (target.src !== window.location.origin + '/logo.png') {
+                target.src = '/logo.png';
+              }
+            }}
+            className="h-[75px] w-auto max-w-[200px] object-contain transition-transform group-hover:scale-105" 
           />
         </Link>
         {onClose && (

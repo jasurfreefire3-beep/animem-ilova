@@ -76,6 +76,133 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // Resend Email orqali tasdiqlangan ro'yxatdan o'tish
+  Future<Map<String, dynamic>> sendVerificationCode(String email) async {
+    return await _authService.sendVerificationCode(email);
+  }
+
+  Future<Map<String, dynamic>> verifyCode(String email, String code) async {
+    return await _authService.verifyCode(email, code);
+  }
+
+  Future<bool> registerVerified({
+    required String name,
+    required String email,
+    required String password,
+    required String code,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _authService.registerVerified(
+      name: name,
+      email: email,
+      password: password,
+      code: code,
+    );
+    _isLoading = false;
+
+    if (result['success'] == true && result['user'] != null) {
+      _user = result['user'] as UserModel;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = result['message'] ?? "Ro'yxatdan o'tishda xatolik yuz berdi";
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Parolni tiklash
+  Future<Map<String, dynamic>> forgotPasswordSendCode(String email) async {
+    return await _authService.forgotPasswordSendCode(email);
+  }
+
+  Future<Map<String, dynamic>> forgotPasswordVerifyCode(String email, String code) async {
+    return await _authService.forgotPasswordVerifyCode(email, code);
+  }
+
+  Future<bool> forgotPasswordReset({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _authService.forgotPasswordReset(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    );
+    _isLoading = false;
+
+    if (result['success'] == true) {
+      if (result['user'] != null) {
+        _user = result['user'] as UserModel;
+      }
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = result['message'] ?? "Parolni yangilashda xatolik yuz berdi";
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Telegram Auth
+  Future<String?> createTelegramSession() async {
+    return await _authService.createTelegramSession();
+  }
+
+  Future<Map<String, dynamic>> checkTelegramStatus(String sessionId) async {
+    final res = await _authService.checkTelegramStatus(sessionId);
+    if (res['status'] == 'authorized' && res['user'] != null) {
+      _user = res['user'] as UserModel;
+      notifyListeners();
+    }
+    return res;
+  }
+
+  Future<bool> simulateTelegramLogin({
+    required String sessionId,
+    required String name,
+    String? username,
+    String? phone,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _authService.simulateTelegramLogin(
+      sessionId: sessionId,
+      name: name,
+      username: username,
+      phone: phone,
+    );
+    _isLoading = false;
+
+    if (result['success'] == true && result['user'] != null) {
+      _user = result['user'] as UserModel;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = result['message'] ?? "Telegram orqali kirishda xatolik";
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void setUser(UserModel user) {
+    _user = user;
+    notifyListeners();
+  }
+
   Future<bool> loginWithGoogle() async {
     _isLoading = true;
     _errorMessage = null;

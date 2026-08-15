@@ -11,6 +11,15 @@ class ApiConfig {
   static const String login = '/api/auth/login';
   static const String register = '/api/auth/register';
   static const String googleAuth = '/api/auth/google';
+  static const String sendCode = '/api/auth/send-code';
+  static const String verifyCode = '/api/auth/verify-code';
+  static const String registerVerified = '/api/auth/register-verified';
+  static const String forgotSendCode = '/api/auth/forgot-password-send-code';
+  static const String forgotVerifyCode = '/api/auth/forgot-password-verify-code';
+  static const String forgotReset = '/api/auth/forgot-password-reset';
+  static const String telegramSession = '/api/auth/telegram/session';
+  static const String telegramStatus = '/api/auth/telegram/status';
+  static const String telegramSimulate = '/api/auth/telegram/simulate';
   static const String me = '/api/auth/me';
   static const String userProfile = '/api/user/profile';
   static const String userAvatar = '/api/user/avatar';

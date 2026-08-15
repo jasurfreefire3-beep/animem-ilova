@@ -229,8 +229,14 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
         {/* Mobile Brand Name */}
         <Link to="/" className="flex items-center md:hidden shrink-0">
           <img 
-            src={logoImg} 
-            alt="AnimeUz" 
+            src={logoImg || "/logo.png"} 
+            alt="Animem.uz" 
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              if (target.src !== window.location.origin + '/logo.png') {
+                target.src = '/logo.png';
+              }
+            }}
             className="h-[40px] min-[400px]:h-[48px] w-auto object-contain" 
           />
         </Link>

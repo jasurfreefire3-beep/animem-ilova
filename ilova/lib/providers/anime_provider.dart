@@ -65,43 +65,25 @@ class AnimeProvider with ChangeNotifier {
   Future<void> searchAnimes(String query, {String? genre}) async {
     _searchQuery = query;
     if (genre != null) _selectedGenre = genre;
-    _isLoading = true;
-    notifyListeners();
 
-    try {
-      final results = await _apiService.getAnimes(
-        search: query.trim().isNotEmpty ? query.trim() : null,
-        genre: _selectedGenre == 'Barchasi' ? null : _selectedGenre,
-      );
-
-      if (results.isNotEmpty) {
-        _animes = results;
-      } else if (query.trim().isNotEmpty || _selectedGenre != 'Barchasi') {
-        // Fallback to local filter if remote returned empty
-        final q = query.trim().toLowerCase();
-        _animes = _allAnimes.where((a) {
-          final matchesQuery = q.isEmpty ||
-              a.title.toLowerCase().contains(q) ||
-              a.description.toLowerCase().contains(q) ||
-              a.janrlar.toLowerCase().contains(q);
-          final matchesGenre = _selectedGenre == 'Barchasi' ||
-              a.janrlar.toLowerCase().contains(_selectedGenre.toLowerCase());
-          return matchesQuery && matchesGenre;
-        }).toList();
-      } else {
-        _animes = _allAnimes;
-      }
-    } catch (_) {
-      final q = query.trim().toLowerCase();
-      _animes = _allAnimes.where((a) {
-        final matchesQuery = q.isEmpty ||
-            a.title.toLowerCase().contains(q) ||
-            a.description.toLowerCase().contains(q);
-        final matchesGenre = _selectedGenre == 'Barchasi' ||
-            a.janrlar.toLowerCase().contains(_selectedGenre.toLowerCase());
-        return matchesQuery && matchesGenre;
-      }).toList();
+    // Agar _allAnimes bo'sh bo'lsa, avval serverdan yuklaymiz
+    if (_allAnimes.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+      _allAnimes = await _apiService.getAnimes();
     }
+
+    final q = _searchQuery.trim().toLowerCase();
+    _animes = _allAnimes.where((a) {
+      final matchesQuery = q.isEmpty ||
+          a.title.toLowerCase().contains(q) ||
+          a.description.toLowerCase().contains(q) ||
+          a.janrlar.toLowerCase().contains(q) ||
+          a.studiyasi.toLowerCase().contains(q);
+      final matchesGenre = _selectedGenre == 'Barchasi' ||
+          a.janrlar.toLowerCase().contains(_selectedGenre.toLowerCase());
+      return matchesQuery && matchesGenre;
+    }).toList();
 
     _isLoading = false;
     notifyListeners();

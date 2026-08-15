@@ -34,10 +34,45 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
   }
 
   Future<void> _loadEpisodes() async {
-    final list = await _apiService.getAnimeEpisodes(widget.anime.id);
+    List<EpisodeModel> list = [];
+    try {
+      list = await _apiService.getAnimeEpisodes(widget.anime.id);
+    } catch (_) {}
+
+    final totalCount = widget.anime.qismlarSoni > 0 ? widget.anime.qismlarSoni : (list.isNotEmpty ? list.length : 1);
+    final List<EpisodeModel> merged = [];
+
+    for (int i = 1; i <= totalCount; i++) {
+      EpisodeModel? found;
+      for (final ep in list) {
+        if (ep.episodeNumber == i) {
+          found = ep;
+          break;
+        }
+      }
+
+      String vUrl = found?.videoUrl ?? '';
+      if (vUrl.isEmpty && i == 1) {
+        vUrl = widget.anime.videoUrl;
+      }
+
+      merged.add(
+        EpisodeModel(
+          id: found?.id ?? i,
+          animeId: widget.anime.id,
+          episodeNumber: i,
+          title: (found != null && found.title.isNotEmpty) ? found.title : '$i-qism',
+          videoUrl: vUrl,
+          posterUrl: found?.posterUrl,
+          views: found?.views ?? 0,
+          createdAt: found?.createdAt,
+        ),
+      );
+    }
+
     if (mounted) {
       setState(() {
-        _episodes = list;
+        _episodes = merged;
         _isLoadingEpisodes = false;
       });
     }

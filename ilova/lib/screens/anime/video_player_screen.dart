@@ -200,14 +200,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   void _setupIframePlayer(String url) {
     try {
       String finalUrl = url;
-      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://') && !finalUrl.contains('<iframe')) {
         finalUrl = ApiConfig.fullUrl(finalUrl);
       }
 
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(Colors.black)
-        ..setUserAgent("Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+        ..setUserAgent("Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 AnimemUzApp/1.0")
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (String url) {
@@ -226,32 +226,23 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           ),
         );
 
-      if (url.contains('<iframe')) {
-        final html = '''
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <style>
-              body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
-              iframe { width: 100%; height: 100%; border: none; }
-            </style>
-          </head>
-          <body>
-            $url
-          </body>
-          </html>
-        ''';
-        controller.loadHtmlString(html, baseUrl: 'https://animem.uz/');
-      } else {
-        controller.loadRequest(
-          Uri.parse(finalUrl),
-          headers: {
-            'Referer': 'https://animem.uz/',
-            'Origin': 'https://animem.uz',
-          },
-        );
-      }
+      final embedSrc = finalUrl.replaceAll('"', '&quot;');
+      final html = '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+          <style>
+            body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+            iframe, video { width: 100%; height: 100%; border: none; }
+          </style>
+        </head>
+        <body>
+          ${url.contains('<iframe') ? url : '<iframe src="$embedSrc" frameborder="0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>'}
+        </body>
+        </html>
+      ''';
+      controller.loadHtmlString(html, baseUrl: 'https://animem.uz/');
 
       setState(() {
         _webViewController = controller;

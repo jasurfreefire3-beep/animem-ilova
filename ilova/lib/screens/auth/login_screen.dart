@@ -4,6 +4,9 @@ import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/toast_utils.dart';
 import '../../../widgets/google_logo.dart';
+import '../../../widgets/telegram_logo.dart';
+import '../../../widgets/forgot_password_dialog.dart';
+import '../../../widgets/telegram_auth_dialog.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -18,6 +21,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -49,6 +59,28 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (authProvider.errorMessage != null) {
         ToastUtils.showError(context, authProvider.errorMessage!);
       }
+    }
+  }
+
+  void _openTelegramAuth() async {
+    final result = await showDialog(
+      context: context,
+      builder: (_) => const TelegramAuthDialog(),
+    );
+    if (result == true && mounted) {
+      Navigator.pop(context);
+    }
+  }
+
+  void _openForgotPassword() async {
+    final result = await showDialog(
+      context: context,
+      builder: (_) => ForgotPasswordDialog(
+        initialEmail: _emailController.text.trim(),
+      ),
+    );
+    if (result == true && mounted) {
+      Navigator.pop(context);
     }
   }
 
@@ -101,9 +133,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                const Text(
-                  "Parol",
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Parol",
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    ),
+                    GestureDetector(
+                      onTap: _openForgotPassword,
+                      child: const Text(
+                        "Parolni unutdingizmi?",
+                        style: TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 6),
                 TextFormField(
@@ -144,13 +192,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Yoki ajratgich
                 Row(
-                  children: [
-                    const Expanded(child: Divider(color: AppTheme.surfaceBorder)),
+                  children: const [
+                    Expanded(child: Divider(color: AppTheme.surfaceBorder)),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 12),
                       child: Text("yoki", style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
                     ),
-                    const Expanded(child: Divider(color: AppTheme.surfaceBorder)),
+                    Expanded(child: Divider(color: AppTheme.surfaceBorder)),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -173,7 +221,33 @@ class _LoginScreenState extends State<LoginScreen> {
                         SizedBox(width: 12),
                         Text(
                           "Google orqali kirish",
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Telegram orqali kirish
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: authProvider.isLoading ? null : _openTelegramAuth,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppTheme.surfaceBorder),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        TelegramLogo(size: 20),
+                        SizedBox(width: 12),
+                        Text(
+                          "Telegram orqali kirish",
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                       ],
                     ),
