@@ -83,19 +83,19 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const Center(
+        builder: (_) => Center(
           child: Material(
             color: Colors.transparent,
             child: Container(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppTheme.surface,
-                borderRadius: BorderRadius.all(Radius.circular(16)),
+                borderRadius: const BorderRadius.all(Radius.circular(16)),
                 border: Border.all(color: AppTheme.surfaceBorder),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [
+                children: const [
                   CircularProgressIndicator(color: AppTheme.primary),
                   SizedBox(height: 16),
                   Text(
