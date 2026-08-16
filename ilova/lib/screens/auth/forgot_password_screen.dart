@@ -4,40 +4,46 @@ import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/toast_utils.dart';
-import '../../widgets/google_logo.dart';
 import '../main_navigation_screen.dart';
-import 'login_screen.dart';
 
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+class ForgotPasswordScreen extends StatefulWidget {
+  final String? initialEmail;
+
+  const ForgotPasswordScreen({Key? key, this.initialEmail}) : super(key: key);
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
-  final _name = TextEditingController();
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _email = TextEditingController();
   final _code = TextEditingController();
-  final _password = TextEditingController();
+  final _newPassword = TextEditingController();
   final _confirmPassword = TextEditingController();
 
   bool _codeSent = false;
   bool _codeVerified = false;
   bool _isSendingCode = false;
   bool _isVerifyingCode = false;
-  bool _obscurePassword = true;
+  bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
 
   int _resendTimer = 0;
   Timer? _timer;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
+      _email.text = widget.initialEmail!;
+    }
+  }
+
+  @override
   void dispose() {
-    _name.dispose();
     _email.dispose();
     _code.dispose();
-    _password.dispose();
+    _newPassword.dispose();
     _confirmPassword.dispose();
     _timer?.cancel();
     super.dispose();
@@ -55,7 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  // 1. Emailga kod yuborish
+  // 1. Kod yuborish
   Future<void> _sendCode() async {
     final email = _email.text.trim();
     if (email.isEmpty || !email.contains('@')) {
@@ -64,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isSendingCode = true);
     final auth = context.read<AuthProvider>();
-    final result = await auth.sendVerificationCode(email);
+    final result = await auth.forgotPasswordSendCode(email);
     setState(() => _isSendingCode = false);
 
     if (!mounted) return;
@@ -72,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (result['success'] == true) {
       setState(() => _codeSent = true);
       _startTimer();
-      ToastUtils.showSuccess(context, result['message'] ?? 'Tasdiqlash kodi emailingizga yuborildi!');
+      ToastUtils.showSuccess(context, result['message'] ?? 'Parolni tiklash kodi emailingizga yuborildi!');
     } else {
       ToastUtils.showError(context, result['message'] ?? 'Kodni yuborib bo\'lmadi');
     }
@@ -84,78 +90,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final code = _code.text.trim();
 
     if (code.length != 6) {
-      return ToastUtils.showError(context, '6 xonali tasdiqlash kodini kiriting');
+      return ToastUtils.showError(context, '6 xonali kodni kiriting');
     }
 
     setState(() => _isVerifyingCode = true);
     final auth = context.read<AuthProvider>();
-    final result = await auth.verifyCode(email, code);
+    final result = await auth.forgotPasswordVerifyCode(email, code);
     setState(() => _isVerifyingCode = false);
 
     if (!mounted) return;
 
     if (result['success'] == true) {
       setState(() => _codeVerified = true);
-      ToastUtils.showSuccess(context, 'Email muvaffaqiyatli tasdiqlandi!');
+      ToastUtils.showSuccess(context, 'Kod tasdiqlandi! Yangi parolni kiriting');
     } else {
-      ToastUtils.showError(context, result['message'] ?? 'Tasdiqlash kodi xato');
+      ToastUtils.showError(context, result['message'] ?? 'Kod noto\'g\'ri');
     }
   }
 
-  // 3. To'liq ro'yxatdan o'tish
-  Future<void> _register() async {
-    final name = _name.text.trim();
+  // 3. Yangi parol saqlash
+  Future<void> _resetPassword() async {
     final email = _email.text.trim();
     final code = _code.text.trim();
-    final password = _password.text;
-    final confirmPassword = _confirmPassword.text;
+    final newPass = _newPassword.text;
+    final confirmPass = _confirmPassword.text;
 
-    if (name.isEmpty) {
-      return ToastUtils.showError(context, 'Ismingizni kiriting');
-    }
-    if (password.length < 6) {
+    if (newPass.length < 6) {
       return ToastUtils.showError(context, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak');
     }
-    if (password != confirmPassword) {
+    if (newPass != confirmPass) {
       return ToastUtils.showError(context, 'Parollar bir-biriga mos kelmadi');
     }
 
     final auth = context.read<AuthProvider>();
-    final success = await auth.registerVerified(
-      name: name,
+    final success = await auth.forgotPasswordReset(
       email: email,
-      password: password,
       code: code,
+      newPassword: newPass,
     );
 
     if (!mounted) return;
 
     if (success) {
-      ToastUtils.showSuccess(context, 'Muvaffaqiyatli ro\'yxatdan o\'tdingiz!');
+      ToastUtils.showSuccess(context, 'Parol muvaffaqiyatli yangilandi va tizimga kirildi!');
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
         (route) => false,
       );
     } else {
-      ToastUtils.showError(context, auth.errorMessage ?? 'Ro\'yxatdan o\'tishda xatolik');
-    }
-  }
-
-  // Google orqali ro'yxatdan o'tish
-  Future<void> _registerWithGoogle() async {
-    final auth = context.read<AuthProvider>();
-    final success = await auth.loginWithGoogle();
-
-    if (!mounted) return;
-
-    if (success) {
-      ToastUtils.showSuccess(context, "Google orqali muvaffaqiyatli ro'yxatdan o'tdingiz!");
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-        (route) => false,
-      );
-    } else {
-      ToastUtils.showError(context, auth.errorMessage ?? "Google orqali ro'yxatdan o'tishda xatolik");
+      ToastUtils.showError(context, auth.errorMessage ?? 'Parolni yangilashda xatolik');
     }
   }
 
@@ -168,7 +151,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F1015),
         elevation: 0,
-        title: const Text("Ro'yxatdan o'tish", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Parolni tiklash', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -183,87 +166,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo
+                  // Icon
                   Center(
                     child: Container(
-                      width: 72,
-                      height: 72,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.12),
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primary.withOpacity(0.25),
-                            blurRadius: 18,
-                            spreadRadius: 2,
-                          ),
-                        ],
                       ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/app_icon.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.movie_filter_rounded,
-                            size: 54,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ),
+                      child: const Icon(Icons.lock_reset_rounded, size: 36, color: AppTheme.primary),
                     ),
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Animem Uz',
+                    'Parolni unutdingizmi?',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   const Text(
-                    'Yangi hisob yaratish',
+                    'Akkauntingizga ulangan emailni kiriting. Biz sizga parolni tiklash kodini yuboramiz.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
                   ),
                   const SizedBox(height: 24),
 
-                  // Google ro'yxatdan o'tish
-                  OutlinedButton.icon(
-                    onPressed: auth.isLoading ? null : _registerWithGoogle,
-                    icon: const GoogleLogo(size: 20),
-                    label: const Text(
-                      'Google bilan davom etish',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFF323648)),
-                      backgroundColor: const Color(0xFF1E202B),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-
-                  // Divider
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    child: Row(
-                      children: const [
-                        Expanded(child: Divider(color: Color(0xFF2A2D3A))),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('yoki email orqali', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
-                        ),
-                        Expanded(child: Divider(color: Color(0xFF2A2D3A))),
-                      ],
-                    ),
-                  ),
-
-                  // 1-qadam: Email kiritish
+                  // Email kiritish
                   TextField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
@@ -300,7 +233,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
 
-                  // 2-qadam: Kod yuborilgan bo'lsa va hali tasdiqlanmagan bo'lsa
+                  // Kod kiritish qismi
                   if (_codeSent && !_codeVerified) ...[
                     const SizedBox(height: 14),
                     TextField(
@@ -350,49 +283,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
 
-                  // 3-qadam: Kod tasdiqlangandan so'ng Ism va Parol kiritish
+                  // Yangi parol kiritish qismi
                   if (_codeVerified) ...[
                     const SizedBox(height: 14),
                     TextField(
-                      controller: _name,
+                      controller: _newPassword,
+                      obscureText: _obscureNewPassword,
                       enabled: !auth.isLoading,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'Ismingiz yoki Taxallus',
-                        labelStyle: const TextStyle(color: AppTheme.textMuted),
-                        prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.textMuted),
-                        filled: true,
-                        fillColor: const Color(0xFF181A22),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF2B2E3D)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF2B2E3D)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: _password,
-                      obscureText: _obscurePassword,
-                      enabled: !auth.isLoading,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        labelText: 'Parol (kamida 6 ta belgi)',
+                        labelText: 'Yangi parol (kamida 6 ta belgi)',
                         labelStyle: const TextStyle(color: AppTheme.textMuted),
                         prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.textMuted),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscureNewPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                             color: AppTheme.textMuted,
                           ),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
                         ),
                         filled: true,
                         fillColor: const Color(0xFF181A22),
@@ -417,7 +325,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       enabled: !auth.isLoading,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'Parolni tasdiqlang',
+                        labelText: 'Yangi parolni tasdiqlang',
                         labelStyle: const TextStyle(color: AppTheme.textMuted),
                         prefixIcon: const Icon(Icons.lock_reset_rounded, color: AppTheme.textMuted),
                         suffixIcon: IconButton(
@@ -444,12 +352,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Ro'yxatdan o'tishni yakunlash tugmasi
                     SizedBox(
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: auth.isLoading ? null : _register,
+                        onPressed: auth.isLoading ? null : _resetPassword,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
                           foregroundColor: Colors.white,
@@ -465,7 +371,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                               )
                             : const Text(
-                                "Ro'yxatdan o'tishni yakunlash",
+                                'Parolni yangilash',
                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                       ),
@@ -494,41 +400,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                               )
                             : Text(
-                                _codeSent ? "Kodni tasdiqlash" : "Tasdiqlash kodini olish",
+                                _codeSent ? 'Kodni tasdiqlash' : 'Tiklash kodini olish',
                                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                               ),
                       ),
                     ),
                   ],
-
-                  const SizedBox(height: 24),
-
-                  // Kirish havolasi
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Allaqachon hisobingiz bormi? ",
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => const LoginScreen()),
-                          );
-                        },
-                        child: const Text(
-                          "Kirish",
-                          style: TextStyle(
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -538,4 +415,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-

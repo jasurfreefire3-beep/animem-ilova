@@ -4,7 +4,9 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/google_logo.dart';
+import '../main_navigation_screen.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,6 +44,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success) {
       ToastUtils.showSuccess(context, 'Xush kelibsiz!');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        (route) => false,
+      );
     } else {
       ToastUtils.showError(context, auth.errorMessage ?? 'Email yoki parol noto\'g\'ri');
     }
@@ -54,6 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success) {
       ToastUtils.showSuccess(context, 'Google orqali tizimga kirildi!');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        (route) => false,
+      );
     } else {
       ToastUtils.showError(context, auth.errorMessage ?? 'Google orqali kirishda xatolik');
     }
@@ -186,7 +196,33 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
+
+                  // Forgot Password link
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ForgotPasswordScreen(
+                              initialEmail: _email.text.trim(),
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Parolni unutdingizmi?",
+                        style: TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
                   // Login Button
                   SizedBox(
