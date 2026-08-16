@@ -41,36 +41,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
-              Center(
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  height: 120,
-                  errorBuilder: (_, __, ___) => const Text(
-                    "ANIMEM.UZ",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 48),
-
-              // Google Sign-In tugmasi
+              // Google Sign-In tugmasi (ichida logo bilan)
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton.icon(
                   onPressed: authProvider.isLoading ? null : _registerWithGoogle,
-                  icon: authProvider.isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Icon(Icons.account_circle, color: Colors.white, size: 24),
+                  icon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Google logosi tugma ichida
+                      Image.asset(
+                        'assets/images/logo.png',
+                        height: 32,
+                        width: 32,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.account_circle, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                  ),
                   label: authProvider.isLoading
                       ? const Text("Ro'yxatdan o'tilmoqda...")
                       : const Text("Google orqali ro'yxatdan o'tish", style: TextStyle(fontSize: 16)),
