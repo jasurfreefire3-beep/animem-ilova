@@ -51,18 +51,9 @@ android {
         multiDexEnabled true
     }
 
-    signingConfigs {
-        release {
-            storeFile file('release.keystore')
-            storePassword 'animem123'
-            keyAlias 'animem'
-            keyPassword 'animem123'
-        }
-    }
-
     buildTypes {
         release {
-            signingConfig = signingConfigs.release
+            signingConfig = signingConfigs.debug
             minifyEnabled false
             shrinkResources false
         }
