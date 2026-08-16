@@ -21,7 +21,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Image.asset(
-          'assets/images/logo.png',
+          'assets/images/logo.jpeg',
           height: 34,
           errorBuilder: (_, __, ___) => const Text(
             "ANIMEM.UZ",

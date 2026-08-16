@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { translateGenre } from '../types';
-import logoImg from '../logo.png';
+import logoImg from '../logo.jpeg';
 
 interface SidebarProps {
   onClose?: () => void;
@@ -100,12 +100,12 @@ export default function Sidebar({ onClose, onGenreSelect }: SidebarProps) {
       <div className="relative h-28 flex items-center justify-center px-5 border-b border-[#1a1a1a]">
         <Link to="/" onClick={onClose} className="flex items-center group gap-2">
           <img 
-            src={logoImg || "/logo.png"} 
+            src={logoImg || "/logo.jpeg"} 
             alt="Animem.uz" 
             onError={(e) => {
               const target = e.currentTarget as HTMLImageElement;
-              if (target.src !== window.location.origin + '/logo.png') {
-                target.src = '/logo.png';
+              if (target.src !== window.location.origin + '/logo.jpeg') {
+                target.src = '/logo.jpeg';
               }
             }}
             className="h-[75px] w-auto max-w-[200px] object-contain transition-transform group-hover:scale-105" 

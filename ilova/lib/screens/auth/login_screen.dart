@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 Center(
                   child: Image.asset(
-                    'assets/images/logo.png',
+                    'assets/images/logo.jpeg',
                     height: 50,
                     errorBuilder: (_, __, ___) => const Text(
                       "ANIMEM.UZ",

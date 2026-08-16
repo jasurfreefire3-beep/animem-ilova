@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Notification, Anime, toSlug } from '../types';
 import { Search, LogOut, User, Bell, Menu, PlusCircle, Heart, Settings, X, Shield, Star, Film } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import logoImg from '../logo.png';
+import logoImg from '../logo.jpeg';
 
 interface NavbarProps {
   onToggleSidebar: () => void;
@@ -229,12 +229,12 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
         {/* Mobile Brand Name */}
         <Link to="/" className="flex items-center md:hidden shrink-0">
           <img 
-            src={logoImg || "/logo.png"} 
+            src={logoImg || "/logo.jpeg"} 
             alt="Animem.uz" 
             onError={(e) => {
               const target = e.currentTarget as HTMLImageElement;
-              if (target.src !== window.location.origin + '/logo.png') {
-                target.src = '/logo.png';
+              if (target.src !== window.location.origin + '/logo.jpeg') {
+                target.src = '/logo.jpeg';
               }
             }}
             className="h-[40px] min-[400px]:h-[48px] w-auto object-contain" 
