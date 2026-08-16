@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/toast_utils.dart';
+import '../../../widgets/google_logo.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -41,33 +42,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Google Sign-In tugmasi (ichida logo bilan)
+              // Google Sign-In tugmasi (ichida rasmiy Google logosi bilan)
               SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 54,
                 child: ElevatedButton.icon(
                   onPressed: authProvider.isLoading ? null : _registerWithGoogle,
-                  icon: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Google logosi tugma ichida
-                      Image.asset(
-                        'assets/images/logo.png',
-                        height: 32,
-                        width: 32,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.account_circle, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
+                  icon: const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: GoogleLogo(size: 22),
                   ),
                   label: authProvider.isLoading
                       ? const Text("Ro'yxatdan o'tilmoqda...")
-                      : const Text("Google orqali ro'yxatdan o'tish", style: TextStyle(fontSize: 16)),
+                      : const Text("Google orqali ro'yxatdan o'tish", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
+                    elevation: 2,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),

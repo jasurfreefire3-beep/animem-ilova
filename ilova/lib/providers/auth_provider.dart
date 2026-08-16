@@ -56,6 +56,24 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> sendEmailLoginCode(String email) => _authService.sendEmailLoginCode(email);
+
+  Future<bool> verifyEmailLoginCode(String email, String code) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    final result = await _authService.verifyEmailLoginCode(email, code);
+    _isLoading = false;
+    if (result['success'] == true && result['user'] != null) {
+      _user = result['user'] as UserModel;
+      notifyListeners();
+      return true;
+    }
+    _errorMessage = result['message'] ?? 'Kirishda xatolik';
+    notifyListeners();
+    return false;
+  }
+
   Future<bool> register(String name, String email, String password) async {
     _isLoading = true;
     _errorMessage = null;

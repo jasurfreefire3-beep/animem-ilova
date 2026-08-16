@@ -14,6 +14,8 @@ class ApiConfig {
   static const String login = '/api/auth/login';
   static const String register = '/api/auth/register';
   static const String googleAuth = '/api/auth/google';
+  static const String emailLoginSendCode = '/api/auth/email-login/send-code';
+  static const String emailLoginVerifyCode = '/api/auth/email-login/verify-code';
   static const String sendCode = '/api/auth/send-code';
   static const String verifyCode = '/api/auth/verify-code';
   static const String registerVerified = '/api/auth/register-verified';

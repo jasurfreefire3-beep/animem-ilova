@@ -22,6 +22,7 @@ class AuthService {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
+    serverClientId: '4531945421-i6f09b977efnuhr8hlkte24m49qler3q.apps.googleusercontent.com',
   );
 
   // Email & Password orqali kirish
@@ -58,6 +59,31 @@ class AuthService {
       return {'success': false, 'message': msg};
     } catch (e) {
       return {'success': false, 'message': "Tizimda xatolik: $e"};
+    }
+  }
+
+  Future<Map<String, dynamic>> sendEmailLoginCode(String email) async {
+    try {
+      final response = await _dio.post(ApiConfig.emailLoginSendCode, data: {'email': email.trim().toLowerCase()});
+      return {'success': response.statusCode == 200, 'message': response.data['message'] ?? 'Kod yuborildi'};
+    } on DioException catch (e) {
+      return {'success': false, 'message': e.response?.data?['error'] ?? 'Kodni yuborib bo\'lmadi'};
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyEmailLoginCode(String email, String code) async {
+    try {
+      final response = await _dio.post(ApiConfig.emailLoginVerifyCode, data: {'email': email.trim().toLowerCase(), 'code': code.trim()});
+      final data = response.data;
+      if (response.statusCode == 200 && data['token'] != null && data['user'] is Map<String, dynamic>) {
+        final user = UserModel.fromJson(data['user']);
+        await StorageService.saveToken(data['token'].toString());
+        await StorageService.saveUser(user);
+        return {'success': true, 'user': user};
+      }
+      return {'success': false, 'message': data['error'] ?? 'Kod xato'};
+    } on DioException catch (e) {
+      return {'success': false, 'message': e.response?.data?['error'] ?? 'Kodni tekshirib bo\'lmadi'};
     }
   }
 

@@ -7,6 +7,7 @@ import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/auth/login_screen.dart';
 import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 import 'services/websocket_service.dart';
@@ -55,8 +56,16 @@ class AnimemApp extends StatelessWidget {
         title: 'Animem Uz',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: const MainNavigationScreen(),
+        home: const AuthGate(),
       ),
     );
   }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+  @override
+  Widget build(BuildContext context) => Consumer<AuthProvider>(
+    builder: (_, auth, __) => auth.isAuthenticated ? const MainNavigationScreen() : const LoginScreen(),
+  );
 }

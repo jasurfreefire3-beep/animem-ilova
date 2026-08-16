@@ -708,6 +708,7 @@ interface VerificationRecord {
 }
 
 const verificationCodes: Record<string, VerificationRecord> = {};
+const emailLoginCodes: Record<string, VerificationRecord> = {};
 const passwordResetCodes: Record<string, VerificationRecord> = {};
 const phoneVerificationCodes: Record<string, VerificationRecord> = {};
 const phonePasswordResetCodes: Record<string, VerificationRecord> = {};
@@ -814,11 +815,9 @@ app.post("/api/auth/send-code", async (req, res) => {
 
     console.log(`[Resend Auth] Verification code generated for ${cleanEmail}`);
 
-    // Send email using Resend API (or fallback successfully)
-    let emailSent = true;
+    // Send email using Resend API
+    let emailSent = false;
     let emailError = "";
-
-    console.log(`[VERIFICATION CODE FOR ${cleanEmail}]: ${code}`);
 
     try {
       const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -846,17 +845,22 @@ app.post("/api/auth/send-code", async (req, res) => {
       if (resendResponse.ok) {
         emailSent = true;
       } else {
-        console.warn("[Resend Warning] Resend API returned non-ok status, but fallback success enabled.");
+        emailError = typeof resendData.message === "string" ? resendData.message : resendData.error?.message || resendData.error || "Resend API cheklovi";
       }
     } catch (sendErr: any) {
-      console.warn("[Resend Fetch Warning]:", sendErr);
+      console.error("[Resend Fetch Error]:", sendErr);
+      emailError = sendErr.message || "Email serveriga ulanishda xatolik";
+    }
+
+    if (!emailSent) {
+      delete verificationCodes[cleanEmail];
+      return res.status(502).json({ error: "Tasdiqlash kodini emailga yuborib bo'lmadi. Iltimos, birozdan so'ng qayta urinib ko'ring." });
     }
 
     return res.json({
       success: true,
-      emailSent: true,
-      codeHint: code, // helpful hint for testing
-      message: `Tasdiqlash kodi email manzilingizga yuborildi! (Kod: ${code})`,
+      emailSent,
+      message: "Tasdiqlash kodi email manzilingizga yuborildi! Pochtani (va Spam papkasini) tekshiring.",
     });
   } catch (error: any) {
     console.error("Send code error:", error);
@@ -892,11 +896,9 @@ app.post("/api/auth/forgot-password-send-code", async (req, res) => {
 
     console.log(`[Forgot Password] Reset code generated for ${cleanEmail}`);
 
-    // Send email via Resend (or fallback successfully)
-    let emailSent = true;
+    // Send email via Resend
+    let emailSent = false;
     let emailError = "";
-
-    console.log(`[FORGOT PASSWORD CODE FOR ${cleanEmail}]: ${code}`);
 
     try {
       const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -924,17 +926,22 @@ app.post("/api/auth/forgot-password-send-code", async (req, res) => {
       if (resendResponse.ok) {
         emailSent = true;
       } else {
-        console.warn("[Resend Warning] Resend API returned non-ok status for forgot password, but fallback success enabled.");
+        emailError = typeof resendData.message === "string" ? resendData.message : resendData.error?.message || "Resend API xatosi";
       }
     } catch (sendErr: any) {
-      console.warn("[Resend Forgot Password Fetch Warning]:", sendErr);
+      console.error("[Resend Forgot Password Fetch Error]:", sendErr);
+      emailError = sendErr.message || "Email serveriga ulanishda xatolik";
+    }
+
+    if (!emailSent) {
+      delete passwordResetCodes[cleanEmail];
+      return res.status(502).json({ error: "Parolni tiklash kodini emailga yuborib bo'lmadi. Iltimos, birozdan so'ng qayta urinib ko'ring." });
     }
 
     return res.json({
       success: true,
-      emailSent: true,
-      codeHint: code,
-      message: `Parolni tiklash kodi email manzilingizga yuborildi! (Kod: ${code})`,
+      emailSent,
+      message: "Parolni tiklash kodi email manzilingizga yuborildi! Pochtani (va Spam papkasini) tekshiring.",
     });
   } catch (error: any) {
     console.error("Forgot password send code error:", error);
@@ -1218,6 +1225,61 @@ app.post("/api/auth/login", async (req, res) => {
   } catch (error: any) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Serverda xatolik yuz berdi" });
+  }
+});
+
+// Passwordsiz email kirishi: kod Resend orqali yuboriladi va mavjud akkauntga token beradi.
+app.post("/api/auth/email-login/send-code", async (req, res) => {
+  try {
+    const cleanEmail = String(req.body.email || "").toLowerCase().trim();
+    if (!cleanEmail.includes("@")) return res.status(400).json({ error: "Yaroqli email manzilini kiriting!" });
+
+    const [users]: any = await dbQuery("SELECT id FROM users WHERE email = ?", [cleanEmail]);
+    if (!users?.length) return res.status(404).json({ error: "Bu email bilan akkaunt topilmadi. Avval saytda ro'yxatdan o'ting yoki Google bilan kiring." });
+    if (!RESEND_API_KEY) return res.status(503).json({ error: "Email xizmati hali sozlanmagan." });
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const resendResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Animem.uz <noreply@animem.uz>",
+        to: [cleanEmail],
+        subject: `Animem.uz - Kirish kodi: ${code}`,
+        html: buildAnimeEmailHtml("KIRISH KODI", "Ilovaga kirish uchun quyidagi tasdiqlash kodini kiriting:", code, "Kod 10 daqiqa amal qiladi. Agar buni siz so'ramagan bo'lsangiz, xabarni e'tiborsiz qoldiring."),
+      }),
+    });
+    if (!resendResponse.ok) {
+      console.error("[Resend email login error]", await resendResponse.text());
+      return res.status(502).json({ error: "Kodni emailga yuborib bo'lmadi. Qayta urinib ko'ring." });
+    }
+    emailLoginCodes[cleanEmail] = { code, expiresAt: Date.now() + 10 * 60 * 1000, verified: false };
+    return res.json({ success: true, message: "Kirish kodi emailingizga yuborildi." });
+  } catch (error) {
+    console.error("Email login send code error:", error);
+    return res.status(500).json({ error: "Kodni yuborishda xatolik yuz berdi." });
+  }
+});
+
+app.post("/api/auth/email-login/verify-code", async (req, res) => {
+  try {
+    const cleanEmail = String(req.body.email || "").toLowerCase().trim();
+    const code = String(req.body.code || "").trim();
+    const record = emailLoginCodes[cleanEmail];
+    if (!record || record.code !== code) return res.status(400).json({ error: "Kirish kodi xato yoki topilmadi." });
+    if (Date.now() > record.expiresAt) {
+      delete emailLoginCodes[cleanEmail];
+      return res.status(400).json({ error: "Kirish kodi muddati o'tgan. Qayta kod so'rang." });
+    }
+    const [users]: any = await dbQuery("SELECT id, name, email, role, avatar_url FROM users WHERE email = ?", [cleanEmail]);
+    const user = users?.[0];
+    if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi." });
+    delete emailLoginCodes[cleanEmail];
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
+    return res.json({ success: true, token, user });
+  } catch (error) {
+    console.error("Email login verify code error:", error);
+    return res.status(500).json({ error: "Kodni tekshirishda xatolik yuz berdi." });
   }
 });
 
