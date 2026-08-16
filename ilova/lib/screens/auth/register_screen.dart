@@ -5,6 +5,7 @@ import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/toast_utils.dart';
 import 'login_screen.dart';
+import 'telegram_auth_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -100,6 +101,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Future<void> _registerWithGoogle() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final result = await auth.loginWithGoogle();
+
+    if (mounted) {
+      if (result['success'] == true) {
+        ToastUtils.showSuccess(context, "Google orqali muvaffaqiyatli ro'yxatdan o'tdingiz!");
+        Navigator.pop(context);
+      } else {
+        ToastUtils.showError(context, result['message'] ?? "Google orqali ro'yxatdan o'tishda xatolik");
+      }
+    }
+  }
+
+  Future<void> _registerWithTelegram() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TelegramAuthScreen()),
+    );
+    
+    if (result == true && mounted) {
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Center(
                   child: Image.asset(
-                    'assets/images/logo.jpeg',
+                    'assets/images/logo.png',
                     height: 50,
                     errorBuilder: (_, __, ___) => const Text(
                       "ANIMEM.UZ",
@@ -287,7 +313,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 20),
 
+                // Ijtimoiy tarmoqlar orqali ro'yxatdan o'tish
+                const Row(
+                  children: [
+                    Expanded(child: Divider(color: AppTheme.surfaceBorder)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text("yoki", style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    ),
+                    Expanded(child: Divider(color: AppTheme.surfaceBorder)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Google va Telegram tugmalari
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Google tugmasi
+                    Container(
+                      height: 50,
+                      width: 150,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppTheme.surfaceBorder),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: TextButton.icon(
+                        onPressed: _registerWithGoogle,
+                        icon: const Icon(Icons.account_circle, color: Colors.white),
+                        label: const Text("Google", style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+
+                    // Telegram tugmasi
+                    Container(
+                      height: 50,
+                      width: 150,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppTheme.surfaceBorder),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: TextButton.icon(
+                        onPressed: _registerWithTelegram,
+                        icon: const Icon(Icons.send, color: Colors.blue),
+                        label: const Text("Telegram", style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
 
                 // Kirishga havola

@@ -8,6 +8,8 @@ import 'providers/chat_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'services/storage_service.dart';
+import 'services/notification_service.dart';
+import 'services/websocket_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +26,15 @@ void main() async {
 
   // Local storage (SharedPreferences) ni ishga tushirish
   await StorageService.init();
+
+  // Bildirishnomalarni ishga tushirish
+  await NotificationService().initialize();
+
+  // Bildirishnomalarga ruxsat so'rash
+  await NotificationService().requestPermissions();
+
+  // WebSocket bilan bog'lanish (real-vaqtli bildirishnomalar uchun)
+  WebSocketService().connect();
 
   runApp(const AnimemApp());
 }

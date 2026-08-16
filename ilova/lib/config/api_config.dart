@@ -4,6 +4,9 @@ class ApiConfig {
   
   // Socket.IO manzili (Real-vaqtli chat uchun)
   static const String socketUrl = 'https://animem.uz';
+  
+  // WebSocket manzili (Bildirishnomalar uchun)
+  static const String wsUrl = 'https://animem.uz';
 
   // API Yo'llari
   static const String animes = '/api/animes';

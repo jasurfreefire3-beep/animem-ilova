@@ -5,6 +5,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../utils/toast_utils.dart';
 import '../../../widgets/forgot_password_dialog.dart';
 import 'register_screen.dart';
+import 'telegram_auth_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -45,6 +46,31 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _loginWithGoogle() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final result = await authProvider.loginWithGoogle();
+
+    if (mounted) {
+      if (result['success'] == true) {
+        ToastUtils.showSuccess(context, "Google orqali muvaffaqiyatli kirdingiz!");
+        Navigator.pop(context);
+      } else {
+        ToastUtils.showError(context, result['message'] ?? "Google orqali kirishda xatolik");
+      }
+    }
+  }
+
+  Future<void> _loginWithTelegram() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TelegramAuthScreen()),
+    );
+    
+    if (result == true && mounted) {
+      Navigator.pop(context);
+    }
+  }
+
   void _openForgotPassword() async {
     final result = await showDialog(
       context: context,
@@ -75,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 Center(
                   child: Image.asset(
-                    'assets/images/logo.jpeg',
+                    'assets/images/logo.png',
                     height: 50,
                     errorBuilder: (_, __, ___) => const Text(
                       "ANIMEM.UZ",
@@ -160,6 +186,56 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text("Kirish"),
                   ),
+                ),
+                const SizedBox(height: 20),
+
+                // Ijtimoiy tarmoqlar orqali kirish
+                const Row(
+                  children: [
+                    Expanded(child: Divider(color: AppTheme.surfaceBorder)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text("yoki", style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    ),
+                    Expanded(child: Divider(color: AppTheme.surfaceBorder)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Google va Telegram tugmalari
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Google tugmasi
+                    Container(
+                      height: 50,
+                      width: 150,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppTheme.surfaceBorder),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: TextButton.icon(
+                        onPressed: _loginWithGoogle,
+                        icon: const Icon(Icons.account_circle, color: Colors.white),
+                        label: const Text("Google", style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+
+                    // Telegram tugmasi
+                    Container(
+                      height: 50,
+                      width: 150,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppTheme.surfaceBorder),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: TextButton.icon(
+                        onPressed: _loginWithTelegram,
+                        icon: const Icon(Icons.send, color: Colors.blue),
+                        label: const Text("Telegram", style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
