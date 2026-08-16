@@ -59,11 +59,20 @@ class _TelegramAuthScreenState extends State<TelegramAuthScreen> {
     const telegramBotUrl = 'https://t.me/Animem_register_bot';
     final uri = Uri.parse(telegramBotUrl);
     
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri, 
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (mounted) {
+          ToastUtils.showError(context, "Telegram botni ochib bo'lmadi - ilova topilmadi");
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        ToastUtils.showError(context, "Telegram botni ochib bo'lmadi");
+        ToastUtils.showError(context, "Telegram botni ochishda xatolik: $e");
       }
     }
   }

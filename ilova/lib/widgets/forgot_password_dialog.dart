@@ -37,15 +37,23 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
 
     setState(() => _isLoading = true);
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final res = await auth.forgotPasswordSendCode(email);
-    setState(() => _isLoading = false);
+    
+    try {
+      final res = await auth.forgotPasswordSendCode(email);
+      setState(() => _isLoading = false);
 
-    if (mounted) {
-      if (res['success'] == true) {
-        ToastUtils.showSuccess(context, res['message'] ?? "Kod emailga yuborildi!");
-        setState(() => _step = 2);
-      } else {
-        ToastUtils.showError(context, res['message'] ?? "Xatolik yuz berdi");
+      if (mounted) {
+        if (res['success'] == true) {
+          ToastUtils.showSuccess(context, res['message'] ?? "Kod emailga yuborildi!");
+          setState(() => _step = 2);
+        } else {
+          ToastUtils.showError(context, res['message'] ?? res['error'] ?? "Xatolik yuz berdi");
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ToastUtils.showError(context, "Server bilan bog'lanishda xatolik: $e");
       }
     }
   }
