@@ -27,9 +27,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./ilova
-        run: |
-          flutter pub get
-          flutter pub run flutter_launcher_icons
+        run: flutter pub get
 
       - name: Setup google-services.json and release keystore
         run: |
