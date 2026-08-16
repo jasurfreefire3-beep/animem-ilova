@@ -48,14 +48,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loginWithGoogle() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final result = await authProvider.loginWithGoogle();
+    final success = await authProvider.loginWithGoogle();
 
     if (mounted) {
-      if (result['success'] == true) {
+      if (success) {
         ToastUtils.showSuccess(context, "Google orqali muvaffaqiyatli kirdingiz!");
         Navigator.pop(context);
       } else {
-        ToastUtils.showError(context, result['message'] ?? "Google orqali kirishda xatolik");
+        ToastUtils.showError(context, authProvider.errorMessage ?? "Google orqali kirishda xatolik");
       }
     }
   }

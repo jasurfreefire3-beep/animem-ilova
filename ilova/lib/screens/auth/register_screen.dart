@@ -103,14 +103,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _registerWithGoogle() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final result = await auth.loginWithGoogle();
+    final success = await auth.loginWithGoogle();
 
     if (mounted) {
-      if (result['success'] == true) {
+      if (success) {
         ToastUtils.showSuccess(context, "Google orqali muvaffaqiyatli ro'yxatdan o'tdingiz!");
         Navigator.pop(context);
       } else {
-        ToastUtils.showError(context, result['message'] ?? "Google orqali ro'yxatdan o'tishda xatolik");
+        ToastUtils.showError(context, auth.errorMessage ?? "Google orqali ro'yxatdan o'tishda xatolik");
       }
     }
   }
