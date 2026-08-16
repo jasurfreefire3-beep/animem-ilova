@@ -272,7 +272,7 @@ class ProfileScreen extends StatelessWidget {
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                     ),
                     trailing: const Icon(Icons.open_in_new, size: 16, color: AppTheme.textMuted),
-                    onTap: () => _launchUrl("https://t.me/animem_uz"),
+                    onTap: () => _launchUrl("https://t.me/animem_uz2"),
                   ),
                   const SizedBox(height: 20),
 

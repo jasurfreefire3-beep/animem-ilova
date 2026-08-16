@@ -98,12 +98,7 @@ class ChatService {
       'reply_to_content': replyToContent,
     };
 
-    // 1. Socket orqali jo'natish
-    if (_socket != null && _socket!.connected) {
-      _socket?.emit('sendMessage', msgData);
-    }
-
-    // 2. REST API orqali sinxronlashtirish
+    // REST API orqali sinxronlashtirish
     try {
       final dio = Dio(
         BaseOptions(

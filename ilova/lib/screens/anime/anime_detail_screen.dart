@@ -78,17 +78,76 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
     }
   }
 
-  void _openPlayer([int episodeIndex = 0]) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => VideoPlayerScreen(
-          anime: widget.anime,
-          episodes: _episodes,
-          initialEpisodeIndex: episodeIndex,
+  void _openPlayer([int episodeIndex = 0]) async {
+    if (_isLoadingEpisodes) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+                border: Border.all(color: AppTheme.surfaceBorder),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppTheme.primary),
+                  SizedBox(height: 16),
+                  Text(
+                    "Qismlar yuklanmoqda...",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-    );
+      );
+
+      int attempts = 0;
+      while (_isLoadingEpisodes && attempts < 25) {
+        await Future.delayed(const Duration(milliseconds: 60));
+        attempts++;
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
+
+    if (_episodes.isEmpty) {
+      _episodes = [
+        EpisodeModel(
+          id: 1,
+          animeId: widget.anime.id,
+          episodeNumber: 1,
+          title: '1-qism',
+          videoUrl: widget.anime.videoUrl,
+        ),
+      ];
+    }
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => VideoPlayerScreen(
+            anime: widget.anime,
+            episodes: _episodes,
+            initialEpisodeIndex: episodeIndex,
+          ),
+        ),
+      );
+    }
   }
 
   void _openComments() {

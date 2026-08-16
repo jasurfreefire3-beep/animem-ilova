@@ -6,6 +6,7 @@ import '../../../models/comment_model.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/date_formatter.dart';
 import '../../../utils/toast_utils.dart';
+import '../../../services/storage_service.dart';
 
 class CommentSheet extends StatefulWidget {
   final dynamic animeId;
@@ -43,6 +44,12 @@ class _CommentSheetState extends State<CommentSheet> {
   Future<void> _sendComment() async {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
+
+    final user = StorageService.getUser();
+    if (user == null) {
+      ToastUtils.showError(context, "Izoh yozish uchun tizimga kiring");
+      return;
+    }
 
     setState(() {
       _isSending = true;
