@@ -2339,7 +2339,7 @@ app.post("/api/integrations/animebot/episode", async (req, res) => {
         `INSERT INTO animes
           (title, description, image_url, banner_url, rating, rating_count, holati, yil, studiyasi, qismlar_soni, korishlar, janrlar, video_url, tavsiya, is_banner, tags)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [normalizedTitle, "", "/logo.jpeg", "/logo.jpeg", 0, 0, "Efirda", null, "", episodeNumber, 0, "", telegram_url, 0, 0, ""]
+        [normalizedTitle, "", "/logo.png", "/logo.png", 0, 0, "Efirda", null, "", episodeNumber, 0, "", telegram_url, 0, 0, ""]
       );
       animeId = Number(result.insertId);
       anime = { id: animeId, title: normalizedTitle, qismlar_soni: episodeNumber, video_url: telegram_url };
@@ -2370,7 +2370,7 @@ app.post("/api/integrations/animebot/episode", async (req, res) => {
     if (!anime) {
       animeId = Date.now();
       anime = {
-        id: animeId, title: normalizedTitle, description: "", image_url: "/logo.jpeg", banner_url: "/logo.jpeg",
+        id: animeId, title: normalizedTitle, description: "", image_url: "/logo.png", banner_url: "/logo.png",
         rating: 0, rating_count: 0, holati: "Efirda", yil: null, studiyasi: "", qismlar_soni: episodeNumber,
         korishlar: 0, janrlar: "", video_url: telegram_url, tavsiya: false, is_banner: false, tags: ""
       };
@@ -5052,7 +5052,7 @@ async function start() {
     if (fs.existsSync(icoPath)) {
       return res.sendFile(icoPath);
     }
-    return res.sendFile(path.join(publicPath, "logo.jpeg"));
+    return res.sendFile(path.join(publicPath, "logo.png"));
   });
 
   app.get("/robots.txt", (req, res) => {
@@ -5133,7 +5133,7 @@ async function start() {
       for (const a of animesList) {
         const slug = toSlugLocal(a.title);
         if (slug) {
-          const imgUrl = (a.image_url || `${domain}/logo.jpeg`).replace(/&/g, "&amp;");
+          const imgUrl = (a.image_url || `${domain}/logo.png`).replace(/&/g, "&amp;");
           const titleClean = (a.title || "Anime").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
           xml += `  <url>\n`;
           xml += `    <loc>${domain}/anime/${slug}</loc>\n`;
@@ -5166,7 +5166,7 @@ async function start() {
 
       for (const m of mangasList) {
         if (m.id) {
-          const coverUrl = (m.cover_url || `${domain}/logo.jpeg`).replace(/&/g, "&amp;");
+          const coverUrl = (m.cover_url || `${domain}/logo.png`).replace(/&/g, "&amp;");
           const mTitleClean = (m.title || "Manga").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
           xml += `  <url>\n`;
           xml += `    <loc>${domain}/manga/${m.id}</loc>\n`;
@@ -5205,7 +5205,7 @@ async function start() {
 
       let titleText = "Animem Uz - O'zbekistondagi eng yirik anime portali";
       let descText = "Animem Uz - O'zbekistondagi eng yirik onlayn anime portali! Bu yerda eng mashhur va eng so'nggi animelarni o'zbek tilida, yuqori sifatda (HD) va mutlaqo bepul tomosha qilishingiz mumkin.";
-      let imageUrl = "https://animem.uz/logo.jpeg";
+      let imageUrl = "https://animem.uz/logo.png";
       let shareUrl = `https://animem.uz${req.path}`;
       let imageAltText = "Animem.uz Logo";
       let jsonLdScript = "";
