@@ -4,76 +4,284 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/google_logo.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
-  final _code = TextEditingController();
-  bool _codeSent = false;
+  final _password = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
-  void dispose() { _email.dispose(); _code.dispose(); super.dispose(); }
-
-  Future<void> _sendCode() async {
-    final email = _email.text.trim();
-    if (!email.contains('@')) return ToastUtils.showError(context, 'Yaroqli email manzilini kiriting');
-    final result = await context.read<AuthProvider>().sendEmailLoginCode(email);
-    if (!mounted) return;
-    if (result['success'] == true) {
-      setState(() => _codeSent = true);
-      ToastUtils.showSuccess(context, result['message'] ?? 'Kod yuborildi');
-    } else { ToastUtils.showError(context, result['message'] ?? 'Kodni yuborib bo\'lmadi'); }
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
   }
 
-  Future<void> _verifyCode() async {
-    if (_code.text.trim().length != 6) return ToastUtils.showError(context, '6 xonali kodni kiriting');
-    final success = await context.read<AuthProvider>().verifyEmailLoginCode(_email.text, _code.text);
-    if (mounted && !success) ToastUtils.showError(context, context.read<AuthProvider>().errorMessage ?? 'Kod xato');
+  Future<void> _loginWithEmailPassword() async {
+    final email = _email.text.trim();
+    final password = _password.text;
+
+    if (email.isEmpty || !email.contains('@')) {
+      return ToastUtils.showError(context, 'Yaroqli email manzilini kiriting');
+    }
+    if (password.isEmpty) {
+      return ToastUtils.showError(context, 'Parolni kiriting');
+    }
+
+    final auth = context.read<AuthProvider>();
+    final success = await auth.login(email, password);
+    if (!mounted) return;
+
+    if (success) {
+      ToastUtils.showSuccess(context, 'Xush kelibsiz!');
+    } else {
+      ToastUtils.showError(context, auth.errorMessage ?? 'Email yoki parol noto\'g\'ri');
+    }
   }
 
   Future<void> _loginWithGoogle() async {
-    final success = await context.read<AuthProvider>().loginWithGoogle();
-    if (mounted && !success) ToastUtils.showError(context, context.read<AuthProvider>().errorMessage ?? 'Google orqali kirishda xatolik');
+    final auth = context.read<AuthProvider>();
+    final success = await auth.loginWithGoogle();
+    if (!mounted) return;
+
+    if (success) {
+      ToastUtils.showSuccess(context, 'Google orqali tizimga kirildi!');
+    } else {
+      ToastUtils.showError(context, auth.errorMessage ?? 'Google orqali kirishda xatolik');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    return Scaffold(body: SafeArea(child: Center(child: SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Image.asset('assets/images/app_icon.png', height: 92, errorBuilder: (_, __, ___) => const Icon(Icons.movie_filter_rounded, size: 72, color: AppTheme.primary)),
-        const SizedBox(height: 20),
-        const Text('Animem Uz', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        Text(_codeSent ? 'Emailingizga yuborilgan 6 xonali kodni kiriting' : 'Davom etish uchun hisobingizga kiring', textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.textSecondary)),
-        const SizedBox(height: 32),
-        TextField(controller: _email, keyboardType: TextInputType.emailAddress, enabled: !_codeSent && !auth.isLoading, decoration: const InputDecoration(labelText: 'Email manzili', prefixIcon: Icon(Icons.email_outlined))),
-        if (_codeSent) ...[const SizedBox(height: 16), TextField(controller: _code, keyboardType: TextInputType.number, maxLength: 6, enabled: !auth.isLoading, decoration: const InputDecoration(labelText: 'Kirish kodi', prefixIcon: Icon(Icons.password_rounded)))],
-        const SizedBox(height: 12),
-        ElevatedButton(onPressed: auth.isLoading ? null : (_codeSent ? _verifyCode : _sendCode), child: Text(auth.isLoading ? 'Kutilmoqda...' : (_codeSent ? 'Ilovaga kirish' : 'Emailga kod yuborish'))),
-        if (_codeSent) TextButton(onPressed: auth.isLoading ? null : _sendCode, child: const Text('Kodni qayta yuborish')),
-        const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Row(children: [Expanded(child: Divider()), Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('yoki', style: TextStyle(color: AppTheme.textMuted))), Expanded(child: Divider())])),
-        OutlinedButton.icon(
-          onPressed: auth.isLoading ? null : _loginWithGoogle,
-          icon: const GoogleLogo(size: 22),
-          label: const Text('Google bilan kirish', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(52),
-            foregroundColor: Colors.white,
-            side: const BorderSide(color: Colors.white24),
-            backgroundColor: const Color(0xFF1E2028),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F1015),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primary.withOpacity(0.25),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/app_icon.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.movie_filter_rounded,
+                            size: 64,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Animem Uz',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Davom etish uchun hisobingizga kiring',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Email input
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: !auth.isLoading,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Email manzili',
+                      labelStyle: const TextStyle(color: AppTheme.textMuted),
+                      prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textMuted),
+                      filled: true,
+                      fillColor: const Color(0xFF181A22),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF2B2E3D)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF2B2E3D)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Password input
+                  TextField(
+                    controller: _password,
+                    obscureText: _obscurePassword,
+                    enabled: !auth.isLoading,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Parol',
+                      labelStyle: const TextStyle(color: AppTheme.textMuted),
+                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.textMuted),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          color: AppTheme.textMuted,
+                        ),
+                        onPressed: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF181A22),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF2B2E3D)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF2B2E3D)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Login Button
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: auth.isLoading ? null : _loginWithEmailPassword,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: auth.isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                            )
+                          : const Text(
+                              'Kirish',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                    ),
+                  ),
+
+                  // Divider "yoki"
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Row(
+                      children: const [
+                        Expanded(child: Divider(color: Color(0xFF2A2D3A))),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('yoki', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                        ),
+                        Expanded(child: Divider(color: Color(0xFF2A2D3A))),
+                      ],
+                    ),
+                  ),
+
+                  // Google Login Button
+                  OutlinedButton.icon(
+                    onPressed: auth.isLoading ? null : _loginWithGoogle,
+                    icon: const GoogleLogo(size: 22),
+                    label: const Text(
+                      'Google bilan kirish',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFF323648)),
+                      backgroundColor: const Color(0xFF1E202B),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Register link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Hisobingiz yo'qmi? ",
+                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          );
+                        },
+                        child: const Text(
+                          "Ro'yxatdan o'tish",
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
-        const Text('Email orqali kirish uchun akkaunt avval saytda yaratilgan bo‘lishi kerak. Google orqali kirish yangi akkauntni avtomatik yaratadi.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-      ])),
-    ))));
+      ),
+    );
   }
 }

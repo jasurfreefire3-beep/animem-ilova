@@ -128,9 +128,17 @@ class AuthService {
     try {
       GoogleSignInAccount? googleUser;
       try {
+        // Avval mavjud sessiyani tozalaymiz
+        await _googleSignIn.signOut().catchError((_) => null);
         googleUser = await _googleSignIn.signIn();
       } catch (signInErr) {
-        // Agar Google Sign In da platform exception bo'lsa
+        final errStr = signInErr.toString();
+        if (errStr.contains('10') || errStr.contains('ApiException: 10')) {
+          return {
+            'success': false,
+            'message': "Google Sign-In sertifikat (SHA-1) xatoligi. Iltimos, Email va Parol orqali kiring yoki ro'yxatdan o'ting."
+          };
+        }
         return {'success': false, 'message': 'Google xizmatlariga ulanib bo\'lmadi: $signInErr'};
       }
 
