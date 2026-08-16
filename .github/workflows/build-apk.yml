@@ -32,15 +32,109 @@ jobs:
       - name: Setup google-services.json
         run: |
           mkdir -p ilova/android/app
-          if [ -f "ilova/android/gradle/google-services.json" ] && [ ! -f "ilova/android/app/google-services.json" ]; then
-            cp ilova/android/gradle/google-services.json ilova/android/app/google-services.json
+          mkdir -p ilova/android/app/src/release
+          mkdir -p ilova/android/app/src/main
+          if [ ! -f "ilova/android/app/google-services.json" ]; then
+            echo "Creating ilova/android/app/google-services.json..."
+            cat << 'EOF' > ilova/android/app/google-services.json
+{
+  "project_info": {
+    "project_number": "4531945421",
+    "firebase_url": "https://stone-dispatch-477517-k6-default-rtdb.firebaseio.com",
+    "project_id": "stone-dispatch-477517-k6",
+    "storage_bucket": "stone-dispatch-477517-k6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:4531945421:android:b21be39bd765e8478e0e84",
+        "android_client_info": {
+          "package_name": "animem.uz"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "4531945421-7a1nfufjdktgpffcai99h48g05tdn0da.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "animem.uz",
+            "certificate_hash": "e908091ae378500d94343970db2341445be05e1e"
+          }
+        },
+        {
+          "client_id": "4531945421-i6f09b977efnuhr8hlkte24m49qler3q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHRasaUsZftJAFgN5SQML_GMrMWHs7eFg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "4531945421-i6f09b977efnuhr8hlkte24m49qler3q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:4531945421:android:143c518aea612c3e8e0e84",
+        "android_client_info": {
+          "package_name": "uz.animem.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "4531945421-9bf8v9aplsakosngp606m7bg3kvqnnk6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "uz.animem.app",
+            "certificate_hash": "00e0d299d4aeb31ef17fac8842cbfcf8e3f77b34"
+          }
+        },
+        {
+          "client_id": "4531945421-mkfn1d8o9r16rhpsselemek7f24l49gu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "uz.animem.app",
+            "certificate_hash": "e908091ae378500d94343970db2341445be05e1e"
+          }
+        },
+        {
+          "client_id": "4531945421-i6f09b977efnuhr8hlkte24m49qler3q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHRasaUsZftJAFgN5SQML_GMrMWHs7eFg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "4531945421-i6f09b977efnuhr8hlkte24m49qler3q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
+EOF
           fi
-          if [ -f "google-services.json" ] && [ ! -f "ilova/android/app/google-services.json" ]; then
-            cp google-services.json ilova/android/app/google-services.json
-          fi
-          if [ -f "ilova/android/app/src/release/google-services.json" ] && [ ! -f "ilova/android/app/google-services.json" ]; then
-            cp ilova/android/app/src/release/google-services.json ilova/android/app/google-services.json
-          fi
+          cp -f ilova/android/app/google-services.json ilova/android/app/src/release/google-services.json
+          cp -f ilova/android/app/google-services.json ilova/android/app/src/main/google-services.json
+          echo "Successfully verified google-services.json:"
           ls -la ilova/android/app/google-services.json
 
       - name: Build Release APK
