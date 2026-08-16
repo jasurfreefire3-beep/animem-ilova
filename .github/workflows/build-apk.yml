@@ -29,6 +29,20 @@ jobs:
         working-directory: ./ilova
         run: flutter pub get
 
+      - name: Setup google-services.json
+        run: |
+          mkdir -p ilova/android/app
+          if [ -f "ilova/android/gradle/google-services.json" ] && [ ! -f "ilova/android/app/google-services.json" ]; then
+            cp ilova/android/gradle/google-services.json ilova/android/app/google-services.json
+          fi
+          if [ -f "google-services.json" ] && [ ! -f "ilova/android/app/google-services.json" ]; then
+            cp google-services.json ilova/android/app/google-services.json
+          fi
+          if [ -f "ilova/android/app/src/release/google-services.json" ] && [ ! -f "ilova/android/app/google-services.json" ]; then
+            cp ilova/android/app/src/release/google-services.json ilova/android/app/google-services.json
+          fi
+          ls -la ilova/android/app/google-services.json
+
       - name: Build Release APK
         working-directory: ./ilova
         run: flutter build apk --release --android-skip-build-dependency-validation
