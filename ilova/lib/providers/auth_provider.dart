@@ -173,6 +173,39 @@ class AuthProvider with ChangeNotifier {
   }
 
   // Telegram Auth
+  
+  Future<bool> loginWithTelegramCode(String code) async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final res = await _authService.loginWithTelegramCode(code);
+      if (res.containsKey('error')) {
+        _errorMessage = res['error'];
+        _setLoading(false);
+        return false;
+      }
+
+      if (res.containsKey('token') && res.containsKey('user')) {
+        _token = res['token'];
+        _user = UserModel.fromJson(res['user']);
+        await _authService.saveToken(_token!);
+        await _authService.saveUser(_user!);
+        _setLoading(false);
+        notifyListeners();
+        return true;
+      }
+      
+      _errorMessage = 'Noma\'lum xatolik';
+      _setLoading(false);
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      return false;
+    }
+  }
+
   Future<String?> createTelegramSession() async {
     return await _authService.createTelegramSession();
   }

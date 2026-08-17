@@ -4181,7 +4181,8 @@ app.delete("/api/chat/clear", authenticateToken, async (req: any, res) => {
 
 // --- TELEGRAM LOGIN ENGINE & BOT POLLING ---
 const BOT_TOKEN = "8738762833:AAE183dMQGDTnBlmlRaHcPoZjqol8jiCNL0";
-const activeSessions = new Map<string, any>(); // sessionId -> sessionData
+const activeSessions = new Map<string, any>();
+const appLoginCodes = new Map<string, any>(); // sessionId -> sessionData
 const chatToSession = new Map<number, string>(); // chatId -> sessionId
 
 // Helper to send Telegram Bot API requests
@@ -4244,12 +4245,28 @@ async function runTelegramBot() {
             const text = message.text || "";
             const from = message.from || {};
 
-            // 1. Handle "/start auth_SESSION_ID"
+            
+            const defaultKeyboard = {
+              keyboard: [
+                [ { text: "📱 Telefon raqamni yuborish", request_contact: true } ],
+                [ { text: "🔐 Ilovaga kirish kodi" } ]
+              ],
+              resize_keyboard: true
+            };
+
+            // 1. Handle "/start auth_SESSION_ID" or app
             if (text.startsWith("/start")) {
               const parts = text.split(" ");
               const startParam = parts[1] || "";
 
-              if (startParam && startParam.startsWith("auth_")) {
+              if (startParam && startParam.startsWith("app")) {
+                await sendTelegramMessage(chat.id,
+                  `<b>Assalomu alaykum, ${from.first_name || 'Foydalanuvchi'}! 👋</b>\n\n` +
+                  `Siz <b>ANIMEUZ</b> mobil ilovasiga kirishni tanladingiz.\n\n` +
+                  `Iltimos, profilingizni tasdiqlash uchun pastdagi <b>"📱 Telefon raqamni yuborish"</b> tugmasini bosing yoki avval ro'yxatdan o'tgan bo'lsangiz <b>"🔐 Ilovaga kirish kodi"</b> ni bosing.`,
+                  defaultKeyboard
+                );
+              } else if (startParam && startParam.startsWith("auth_")) {
                 const sessionId = startParam;
 
                 activeSessions.set(sessionId, {
@@ -4263,19 +4280,9 @@ async function runTelegramBot() {
                 await sendTelegramMessage(chat.id,
                   `<b>Assalomu alaykum, ${from.first_name || 'Foydalanuvchi'}! 👋</b>\n\n` +
                   `Siz <b>ANIMEUZ</b> saytiga kirish jarayonini boshladingiz. Kirishni tasdiqlash uchun quyidagi <b>"📱 Telefon raqamni yuborish"</b> tugmasini bosing:`,
-                  {
-                    keyboard: [
-                      [
-                        {
-                          text: "📱 Telefon raqamni yuborish",
-                          request_contact: true
-                        }
-                      ]
-                    ],
-                    one_time_keyboard: true,
-                    resize_keyboard: true
-                  }
+                  defaultKeyboard
                 );
+              } else if (startParam) {
               } else if (startParam) {
                 // Try to find the anime by slug
                 const toSlugLocal = (text: string): string => {
@@ -4334,10 +4341,53 @@ async function runTelegramBot() {
                 await sendTelegramMessage(chat.id,
                   `<b>Assalomu alaykum! 👋</b>\n\n` +
                   `ANIMEUZ rasmiy botiga xush kelibsiz.\n\n` +
-                  `Siz saytga xavfsiz va tezkor kirish uchun saytdagi <b>"Telegram bilan kirish"</b> tugmasini bosing va ushbu botga o'ting.`
+                  `Siz saytga xavfsiz va tezkor kirish uchun saytdagi <b>"Telegram bilan kirish"</b> tugmasini bosing va ushbu botga o'ting.`,
+                  defaultKeyboard
                 );
               }
             }
+            // 1.5 Handle Ilovaga kirish kodi
+            else if (text === "🔐 Ilovaga kirish kodi") {
+              const tgUserId = from.id || chat.id;
+              const [users]: any = await dbQuery("SELECT * FROM users WHERE telegram_id = ?", [String(tgUserId)]);
+              const user = users[0];
+              
+              if (!user) {
+                await sendTelegramMessage(chat.id, 
+                  "Siz hali ro'yxatdan o'tmagansiz! Iltimos, avval pastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.", 
+                  defaultKeyboard
+                );
+              } else {
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                const userPayload = {
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  role: user.role,
+                  avatar_url: user.avatar_url,
+                };
+                const tokenPayload = {
+                  id: user.id,
+                  email: user.email,
+                  role: user.role,
+                };
+                const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "30d" });
+                
+                appLoginCodes.set(code, {
+                  user: userPayload,
+                  token,
+                  expires: Date.now() + 5 * 60 * 1000 // 5 minutes
+                });
+                
+                await sendTelegramMessage(chat.id,
+                  `Sizning ilovaga kirish kodingiz:\n\n` +
+                  `<pre>${code}</pre>\n\n` +
+                  `Ushbu kodni mobil ilovaga kiriting. Kod 5 daqiqa davomida amal qiladi.`,
+                  defaultKeyboard
+                );
+              }
+            }
+            // 2. Handle Contact (Phone sharing)
             // 2. Handle Contact (Phone sharing)
             else if (message.contact) {
               const contact = message.contact;
@@ -4442,22 +4492,41 @@ async function runTelegramBot() {
                   };
                   const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "30d" });
 
+                  
                   // Mark session authorized
-                  activeSessions.set(sessionId, {
-                    status: "authorized",
-                    token,
-                    user: userPayload,
-                    createdAt: session.createdAt || Date.now()
-                  });
+                  if (sessionId && activeSessions.has(sessionId)) {
+                    activeSessions.set(sessionId, {
+                      status: "authorized",
+                      token,
+                      user: userPayload,
+                      createdAt: activeSessions.get(sessionId).createdAt || Date.now()
+                    });
 
-                  await sendTelegramMessage(chat.id,
-                    `<b>Siz ANIMEUZ saytiga muvaffaqiyatli kirdingiz! 🎉</b>\n\n` +
-                    `👤 <b>Ism:</b> ${name}\n` +
-                    (phone ? `📞 <b>Telefon:</b> ${phone}\n\n` : '\n') +
-                    `Saytda avtorizatsiya yakunlandi! Endi saytga qaytib tomoshani davom ettirishingiz mumkin.`,
-                    { remove_keyboard: true }
-                  );
-                } catch (contactErr) {
+                    await sendTelegramMessage(chat.id,
+                      `<b>Siz ANIMEUZ saytiga muvaffaqiyatli kirdingiz! 🎉</b>\n\n` +
+                      `👤 <b>Ism:</b> ${name}\n` +
+                      (phone ? `📞 <b>Telefon:</b> ${phone}\n\n` : '\n') +
+                      `Saytda avtorizatsiya yakunlandi! Endi saytga qaytib tomoshani davom ettirishingiz mumkin.`,
+                      defaultKeyboard
+                    );
+                  } else {
+                    // It was an app login or direct contact share
+                    const code = Math.floor(100000 + Math.random() * 900000).toString();
+                    appLoginCodes.set(code, {
+                      user: userPayload,
+                      token,
+                      expires: Date.now() + 5 * 60 * 1000
+                    });
+                    
+                    await sendTelegramMessage(chat.id,
+                      `<b>Muvaffaqiyatli ro'yxatdan o'tdingiz! 🎉</b>\n\n` +
+                      `Sizning mobil ilovaga kirish kodingiz:\n\n` +
+                      `<pre>${code}</pre>\n\n` +
+                      `Ushbu kodni mobil ilovaga kiriting. Kod 5 daqiqa davomida amal qiladi.`,
+                      defaultKeyboard
+                    );
+                  }
+} catch (contactErr) {
                   console.error("Error processing Telegram contact auth:", contactErr);
                   await sendTelegramMessage(chat.id, "Tizimga kirishda xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.");
                 }
@@ -4685,6 +4754,24 @@ async function runSupportTelegramBot() {
 }
 
 // 1. Create a session ID
+
+// Endpoint to verify 6-digit code for mobile app
+app.post("/api/auth/telegram/code", async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: "Kod kiritilmadi" });
+  
+  const loginData = appLoginCodes.get(code);
+  if (!loginData) return res.status(400).json({ error: "Kod noto'g'ri yoki yaroqsiz" });
+  
+  if (Date.now() > loginData.expires) {
+    appLoginCodes.delete(code);
+    return res.status(400).json({ error: "Kod muddati tugagan" });
+  }
+  
+  appLoginCodes.delete(code);
+  return res.json({ token: loginData.token, user: loginData.user });
+});
+
 app.get("/api/auth/telegram/session", (req, res) => {
   const sessionId = "auth_" + Math.random().toString(36).substring(2, 15);
   activeSessions.set(sessionId, {

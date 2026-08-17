@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -53,20 +54,100 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _loginWithGoogle() async {
-    final auth = context.read<AuthProvider>();
-    final success = await auth.loginWithGoogle();
-    if (!mounted) return;
-
-    if (success) {
-      ToastUtils.showSuccess(context, 'Google orqali tizimga kirildi!');
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-        (route) => false,
-      );
+  Future<void> _loginWithTelegram() async {
+    final url = Uri.parse('https://t.me/Animem_register_bot?start=app');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+      _showTelegramCodeDialog();
     } else {
-      ToastUtils.showError(context, auth.errorMessage ?? 'Google orqali kirishda xatolik');
+      ToastUtils.showError(context, 'Telegram ochilmadi');
     }
+  }
+
+  void _showTelegramCodeDialog() {
+    final codeController = TextEditingController();
+    bool isLoading = false;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1B22),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Telegram Kod', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Telegram botdan kelgan 6 xonali kodni kiriting:',
+                  style: TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: codeController,
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    counterText: '',
+                    filled: true,
+                    fillColor: const Color(0xFF23252F),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(ctx),
+                child: const Text('Bekor qilish', style: TextStyle(color: Colors.white54)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: isLoading ? null : () async {
+                  final code = codeController.text.trim();
+                  if (code.length != 6) {
+                    ToastUtils.showError(context, 'Kodni to\'liq kiriting');
+                    return;
+                  }
+                  
+                  setState(() => isLoading = true);
+                  final auth = context.read<AuthProvider>();
+                  final success = await auth.loginWithTelegramCode(code);
+                  
+                  if (!mounted) return;
+                  setState(() => isLoading = false);
+                  
+                  if (success) {
+                    Navigator.pop(ctx);
+                    ToastUtils.showSuccess(context, 'Muvaffaqiyatli kirdingiz!');
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+                      (route) => false,
+                    );
+                  } else {
+                    ToastUtils.showError(context, auth.errorMessage ?? 'Kod noto\'g\'ri');
+                  }
+                },
+                child: isLoading 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                    : const Text('Tasdiqlash'),
+              ),
+            ],
+          );
+        }
+      ),
+    );
   }
 
   @override

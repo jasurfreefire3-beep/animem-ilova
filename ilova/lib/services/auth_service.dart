@@ -373,6 +373,23 @@ class AuthService {
   // --- TELEGRAM BOT AUTH ---
 
   // 1. Telegram sessiya yaratish
+  
+  Future<Map<String, dynamic>> loginWithTelegramCode(String code) async {
+    try {
+      final response = await _dio.post('/api/auth/telegram/code', data: {
+        'code': code,
+      });
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response != null) {
+        return {'error': e.response!.data['error'] ?? 'Noma\'lum xatolik'};
+      }
+      return {'error': 'Tarmoq xatosi'};
+    } catch (e) {
+      return {'error': 'Xatolik yuz berdi'};
+    }
+  }
+
   Future<String?> createTelegramSession() async {
     try {
       final response = await _dio.get(ApiConfig.telegramSession);

@@ -1,0 +1,151 @@
+                    sessionId = sid;
+                    chatToSession.set(chat.id, sid);
+                    break;
+                  }
+                }
+              }
+
+              if (sessionId && activeSessions.has(sessionId)) {
+                const session = activeSessions.get(sessionId);
+
+                try {
+                  const phone = contact.phone_number || "";
+                  const tgUser = session.tgUser || message.from || {};
+                  const tgUserId = tgUser.id || contact.user_id || message.from?.id || chat.id;
+
+                  // Get Telegram Avatar URL if any
+                  let avatar_url = null;
+                  try {
+                    const photosRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUserProfilePhotos?user_id=${tgUserId}&limit=1`);
+                    const photosData: any = await photosRes.json();
+                    if (photosData.ok && photosData.result && photosData.result.total_count > 0) {
+                      const fileId = photosData.result.photos[0][0].file_id;
+                      const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+                      const fileData: any = await fileRes.json();
+                      if (fileData.ok && fileData.result) {
+                        avatar_url = `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileData.result.file_path}`;
+                      }
+                    }
+                  } catch (e) {
+                    console.error("Error fetching user profile photos from Telegram:", e);
+                  }
+
+                  const email = `tg_${tgUserId}@telegram.uz`;
+                  const firstName = tgUser.first_name || message.from?.first_name || contact.first_name || "Foydalanuvchi";
+                  const lastName = tgUser.last_name || message.from?.last_name || contact.last_name || "";
+                  const name = `${firstName} ${lastName}`.trim();
+
+                  // Sync to DB
+                  let [users]: any = await dbQuery("SELECT * FROM users WHERE telegram_id = ? OR email = ?", [String(tgUserId), email]);
+                  let user = users[0];
+
+                  if (!user) {
+                    const randomPass = Math.random().toString(36).slice(-10);
+                    const hashedPassword = await bcrypt.hash(randomPass, 10);
+                    const role = email === "mosinjonovjasurbek28@gmail.com" ? "admin" : "user";
+
+                    try {
+                      const [insertRes]: any = await dbQuery(
+                        "INSERT INTO users (name, email, password, role, avatar_url, telegram_id) VALUES (?, ?, ?, ?, ?, ?)",
+                        [name, email, hashedPassword, role, avatar_url || null, String(tgUserId)]
+                      );
+
+                      user = {
+                        id: insertRes.insertId,
+                        name,
+                        email,
+                        role,
+                        avatar_url: avatar_url || null,
+                        telegram_id: String(tgUserId)
+                      };
+                    } catch (insertErr: any) {
+                      if (insertErr.code === 'ER_DUP_ENTRY') {
+                        let [existingUsers]: any = await dbQuery("SELECT * FROM users WHERE email = ?", [email]);
+                        user = existingUsers[0];
+                        if (!user) throw insertErr;
+                      } else {
+                        throw insertErr;
+                      }
+                    }
+                  } else {
+                    await dbQuery(
+                      "UPDATE users SET telegram_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?",
+                      [String(tgUserId), avatar_url || null, user.id]
+                    );
+                    user.telegram_id = String(tgUserId);
+                    if (!user.avatar_url && avatar_url) {
+                      user.avatar_url = avatar_url;
+                    }
+                  }
+
+                  // JWT
+                  const userPayload = {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    avatar_url: user.avatar_url,
+                  };
+                  const tokenPayload = {
+                    id: user.id,
+                    email: user.email,
+                    role: user.role,
+                  };
+                  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "30d" });
+
+                  
+                  // Mark session authorized
+                  if (sessionId && activeSessions.has(sessionId)) {
+                    activeSessions.set(sessionId, {
+                      status: "authorized",
+                      token,
+                      user: userPayload,
+                      createdAt: activeSessions.get(sessionId).createdAt || Date.now()
+                    });
+
+                    await sendTelegramMessage(chat.id,
+                      `<b>Siz ANIMEUZ saytiga muvaffaqiyatli kirdingiz! 🎉</b>\n\n` +
+                      `👤 <b>Ism:</b> ${name}\n` +
+                      (phone ? `📞 <b>Telefon:</b> ${phone}\n\n` : '\n') +
+                      `Saytda avtorizatsiya yakunlandi! Endi saytga qaytib tomoshani davom ettirishingiz mumkin.`,
+                      defaultKeyboard
+                    );
+                  } else {
+                    // It was an app login or direct contact share
+                    const code = Math.floor(100000 + Math.random() * 900000).toString();
+                    appLoginCodes.set(code, {
+                      user: userPayload,
+                      token,
+                      expires: Date.now() + 5 * 60 * 1000
+                    });
+                    
+                    await sendTelegramMessage(chat.id,
+                      `<b>Muvaffaqiyatli ro'yxatdan o'tdingiz! 🎉</b>\n\n` +
+                      `Sizning mobil ilovaga kirish kodingiz:\n\n` +
+                      `<pre>${code}</pre>\n\n` +
+                      `Ushbu kodni mobil ilovaga kiriting. Kod 5 daqiqa davomida amal qiladi.`,
+                      defaultKeyboard
+                    );
+                  }
+catch (contactErr) {
+                  console.error("Error processing Telegram contact auth:", contactErr);
+                  await sendTelegramMessage(chat.id, "Tizimga kirishda xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.");
+                }
+              } else {
+                await sendTelegramMessage(chat.id, "Sessiya topilmadi yoki muddati tugagan. Iltimos saytdan qayta urining.");
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error in telegram polling loop:", err);
+    }
+
+    setTimeout(poll, 1500);
+  };
+
+  poll();
+}
+
+// --- SUPPORT TELEGRAM BOT ENGINE (@animem_support_bot) ---
