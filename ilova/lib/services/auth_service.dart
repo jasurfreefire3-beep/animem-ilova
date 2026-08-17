@@ -441,7 +441,6 @@ class AuthService {
   Future<void> logout() async {
     await StorageService.removeToken();
     try {
-      await _googleSignIn.signOut();
-    } catch (_) {}
+      } catch (_) {}
   }
 }
