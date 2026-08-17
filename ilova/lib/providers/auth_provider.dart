@@ -278,26 +278,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> loginWithGoogle() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    final result = await _authService.loginWithGoogle();
-    _isLoading = false;
-
-    if (result['success'] == true && result['user'] != null) {
-      _user = result['user'] as UserModel;
-      _errorMessage = null;
-      notifyListeners();
-      return true;
-    } else {
-      _errorMessage = result['message'] ?? "Google orqali kirishda xatolik yuz berdi";
-      notifyListeners();
-      return false;
-    }
-  }
-
+  
   Future<bool> updateProfile({
     required String name,
     String? bio,

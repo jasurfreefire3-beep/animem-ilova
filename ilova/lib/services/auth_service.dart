@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+
 import '../config/api_config.dart';
 import '../models/user_model.dart';
 import 'storage_service.dart';
@@ -20,11 +20,7 @@ class AuthService {
     ),
   );
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-    serverClientId: '4531945421-i6f09b977efnuhr8hlkte24m49qler3q.apps.googleusercontent.com',
-  );
-
+  
   // Email & Password orqali kirish
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
@@ -145,71 +141,7 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>> loginWithGoogle() async {
-    try {
-      GoogleSignInAccount? googleUser;
-      try {
-        // Avval mavjud sessiyani tozalaymiz
-        await _googleSignIn.signOut().catchError((_) => null);
-        googleUser = await _googleSignIn.signIn();
-      } catch (signInErr) {
-        final errStr = signInErr.toString();
-        if (errStr.contains('10') || errStr.contains('ApiException: 10')) {
-          return {
-            'success': false,
-            'message': "Google Sign-In sertifikat (SHA-1) xatoligi. Iltimos, Email va Parol orqali kiring yoki ro'yxatdan o'ting."
-          };
-        }
-        return {'success': false, 'message': 'Google xizmatlariga ulanib bo\'lmadi: $signInErr'};
-      }
-
-      if (googleUser == null) {
-        return {'success': false, 'message': 'Google orqali kirish bekor qilindi'};
-      }
-
-      try {
-        final response = await _dio.post(
-          ApiConfig.googleAuth,
-          data: {
-            'email': googleUser.email,
-            'name': googleUser.displayName ?? 'Google User',
-            'avatar_url': googleUser.photoUrl,
-            'google_id': googleUser.id,
-          },
-        );
-
-        final data = response.data;
-        if (response.statusCode == 200 && data != null) {
-          final token = data['token'] ?? data['access_token'] ?? data['data']?['token'];
-          final rawUser = data['user'] ?? data['data']?['user'] ?? data['data'];
-
-          if (token != null && rawUser is Map<String, dynamic>) {
-            final user = UserModel.fromJson(rawUser);
-            await StorageService.saveToken(token.toString());
-            await StorageService.saveUser(user);
-            return {'success': true, 'user': user};
-          }
-        }
-      } catch (backendErr) {
-        // Server bilan bog'lanishda fallback
-      }
-
-      final localUser = UserModel(
-        id: googleUser.id.hashCode.abs(),
-        name: googleUser.displayName ?? 'Google User',
-        email: googleUser.email,
-        avatarUrl: googleUser.photoUrl ?? '',
-        role: 'user',
-        createdAt: DateTime.now().toIso8601String(),
-      );
-      await StorageService.saveToken('google_token_${googleUser.id}');
-      await StorageService.saveUser(localUser);
-      return {'success': true, 'user': localUser};
-    } catch (e) {
-      return {'success': false, 'message': 'Google orqali kirishda xatolik: $e'};
-    }
-  }
-
+  
   // --- RESEND EMAIL OTP VERIFICATION ---
 
   // 1. Ro'yxatdan o'tish uchun kod yuborish
