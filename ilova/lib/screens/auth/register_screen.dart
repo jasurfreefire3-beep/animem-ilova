@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
@@ -33,16 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   int _resendTimer = 0;
   Timer? _timer;
 
-  @override
-  void dispose() {
-    _name.dispose();
-    _email.dispose();
-    _code.dispose();
-    _password.dispose();
-    _confirmPassword.dispose();
-    _timer?.cancel();
-    super.dispose();
-  }
+  
 
   void _startTimer() {
     _timer?.cancel();
@@ -139,6 +132,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } else {
       ToastUtils.showError(context, auth.errorMessage ?? 'Ro\'yxatdan o\'tishda xatolik');
+    }
+  }
+
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  void _initDeepLinks() {
+    _appLinks = AppLinks();
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
+      if (uri.scheme == 'animem' && uri.host == 'auth') {
+        final token = uri.queryParameters['token'];
+        if (token != null) {
+          final auth = context.read<AuthProvider>();
+          final success = await auth.loginWithToken(token);
+          if (mounted && success) {
+            ToastUtils.showSuccess(context, 'Google orqali tizimga kirildi!');
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+              (route) => false,
+            );
+          }
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _registerWithGoogle() async {
+    final url = Uri.parse('https://animem.uz/api/auth/google/mobile-login');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      ToastUtils.showError(context, 'Brauzerni ochib bo\'lmadi');
     }
   }
 

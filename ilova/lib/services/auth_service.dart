@@ -124,6 +124,27 @@ class AuthService {
   }
 
   // Google orqali kirish
+  Future<Map<String, dynamic>> loginWithToken(String token) async {
+    try {
+      final response = await _dio.get(
+        '/api/auth/me',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final rawUser = response.data['user'] ?? response.data;
+        if (rawUser is Map<String, dynamic>) {
+          final user = UserModel.fromJson(rawUser);
+          await StorageService.saveToken(token);
+          await StorageService.saveUser(user);
+          return {'success': true, 'user': user};
+        }
+      }
+      return {'success': false, 'message': 'Foydalanuvchi ma\'lumotlarini yuklab bo\'lmadi'};
+    } catch (e) {
+      return {'success': false, 'message': 'Xatolik yuz berdi'};
+    }
+  }
+
   Future<Map<String, dynamic>> loginWithGoogle() async {
     try {
       GoogleSignInAccount? googleUser;

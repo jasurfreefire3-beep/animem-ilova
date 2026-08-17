@@ -175,33 +175,37 @@ class AuthProvider with ChangeNotifier {
   // Telegram Auth
   
   Future<bool> loginWithTelegramCode(String code) async {
-    _setLoading(true);
+    _isLoading = true;
     _errorMessage = null;
+    notifyListeners();
 
     try {
       final res = await _authService.loginWithTelegramCode(code);
       if (res.containsKey('error')) {
         _errorMessage = res['error'];
-        _setLoading(false);
+        _isLoading = false;
+        notifyListeners();
         return false;
       }
 
       if (res.containsKey('token') && res.containsKey('user')) {
-        _token = res['token'];
+        final token = res['token'].toString();
         _user = UserModel.fromJson(res['user']);
-        await _authService.saveToken(_token!);
-        await _authService.saveUser(_user!);
-        _setLoading(false);
+        await StorageService.saveToken(token);
+        await StorageService.saveUser(_user!);
+        _isLoading = false;
         notifyListeners();
         return true;
       }
       
       _errorMessage = 'Noma\'lum xatolik';
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
       return false;
     } catch (e) {
       _errorMessage = e.toString();
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
       return false;
     }
   }
@@ -252,6 +256,26 @@ class AuthProvider with ChangeNotifier {
   void setUser(UserModel user) {
     _user = user;
     notifyListeners();
+  }
+
+  Future<bool> loginWithToken(String token) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _authService.loginWithToken(token);
+    _isLoading = false;
+    
+    if (result['success'] == true && result['user'] != null) {
+      _user = result['user'] as UserModel;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = result['message'] ?? "Xatolik yuz berdi";
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> loginWithGoogle() async {

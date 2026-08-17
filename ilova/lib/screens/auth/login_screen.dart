@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
@@ -21,12 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   bool _obscurePassword = true;
 
-  @override
-  void dispose() {
-    _email.dispose();
-    _password.dispose();
-    super.dispose();
-  }
+  
 
   Future<void> _loginWithEmailPassword() async {
     final email = _email.text.trim();
@@ -51,6 +48,53 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else {
       ToastUtils.showError(context, auth.errorMessage ?? 'Email yoki parol noto\'g\'ri');
+    }
+  }
+
+  
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  void _initDeepLinks() {
+    _appLinks = AppLinks();
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
+      if (uri.scheme == 'animem' && uri.host == 'auth') {
+        final token = uri.queryParameters['token'];
+        if (token != null) {
+          final auth = context.read<AuthProvider>();
+          final success = await auth.loginWithToken(token);
+          if (mounted && success) {
+            ToastUtils.showSuccess(context, 'Google orqali tizimga kirildi!');
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+              (route) => false,
+            );
+          }
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loginWithGoogle() async {
+    final url = Uri.parse('https://animem.uz/api/auth/google/mobile-login');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      ToastUtils.showError(context, 'Brauzerni ochib bo\'lmadi');
     }
   }
 
