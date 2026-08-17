@@ -175,19 +175,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _registerWithGoogle() async {
     final url = Uri.parse('https://animem.uz/api/auth/google/mobile-login');
-    if (await canLaunchUrl(url)) {
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    } catch (e) {
+      try {
+        await launchUrl(url, mode: LaunchMode.platformDefault);
+      } catch (e2) {
+        if (mounted) {
+          ToastUtils.showError(context, 'Brauzerni ochib bo\'lmadi: $e2');
+        }
+      }
+    }
+  } else {
       ToastUtils.showError(context, 'Brauzerni ochib bo\'lmadi');
     }
   }
 
   Future<void> _registerWithTelegram() async {
-    final url = Uri.parse('https://t.me/Animem_register_bot?start=app');
-    if (await canLaunchUrl(url)) {
+    final url = Uri.parse('https://animem.uz/api/auth/telegram/mobile-login');
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
-      _showTelegramCodeDialog();
-    } else {
+    } catch (e) {
+      try {
+        await launchUrl(url, mode: LaunchMode.platformDefault);
+      } catch (e2) {
+        if (mounted) {
+          ToastUtils.showError(context, 'Brauzerni ochib bo\'lmadi: $e2');
+        }
+      }
+    }
+  } else {
       ToastUtils.showError(context, 'Telegram ochilmadi');
     }
   }

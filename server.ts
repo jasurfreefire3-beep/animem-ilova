@@ -1371,6 +1371,12 @@ app.get("/api/auth/google/mobile-callback", async (req, res) => {
   }
 });
 
+// Telegram mobile login redirect (xuddi saytdagidek yoki bot orqali)
+app.get("/api/auth/telegram/mobile-login", (req, res) => {
+  // Bu yerda foydalanuvchini Telegram botga yoki saytdagi telegram login sahifasiga yo'naltiramiz
+  res.redirect("https://t.me/Animem_register_bot?start=app");
+});
+
 app.post("/api/auth/google", async (req, res) => {
   try {
     const { email, name, avatar_url } = req.body;

@@ -56,6 +56,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/images/telegram_icon.png
     - assets/images/
 
 flutter_launcher_icons:
